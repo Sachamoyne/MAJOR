@@ -12,6 +12,11 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        excellent: "border-transparent bg-success/10 text-success font-semibold",
+        good: "border-transparent bg-accent/10 text-accent font-semibold",
+        explore: "border-transparent bg-muted text-muted-foreground font-semibold",
+        skill: "border-border bg-card text-foreground font-medium",
+        "skill-wanted": "border-accent/30 bg-accent/5 text-accent font-medium",
       },
     },
     defaultVariants: {

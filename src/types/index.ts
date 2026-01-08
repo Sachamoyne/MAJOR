@@ -5,12 +5,14 @@ export interface Skill {
 }
 
 export type SkillCategory = 
-  | 'tech'
-  | 'product'
-  | 'business'
-  | 'marketing'
-  | 'design'
-  | 'operations';
+  | 'tech-product'
+  | 'business-strategy'
+  | 'marketing-growth'
+  | 'finance-legal'
+  | 'ops-organization'
+  | 'sector-expertise';
+
+export type SkillType = 'primary' | 'secondary';
 
 export type SkillLevel = 'beginner' | 'intermediate' | 'expert';
 export type Priority = 'must-have' | 'nice-to-have';
@@ -77,7 +79,8 @@ export interface OnboardingData {
   firstName: string;
   lastName: string;
   bio: string;
-  skills: UserSkill[];
+  primarySkills: UserSkill[];
+  secondarySkills: UserSkill[];
   wantedSkills: WantedSkill[];
   role: Role;
   availability: Availability;

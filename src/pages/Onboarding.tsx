@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { OnboardingProgress } from '@/components/OnboardingProgress';
 import { SkillSelector } from '@/components/SkillSelector';
+import { WantedSkillSelector } from '@/components/WantedSkillSelector';
 import { UserSkill, WantedSkill, Role, Availability, Ambition, OnboardingData } from '@/types';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, ArrowRight, Users, Briefcase, Clock, Rocket } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Users, Clock, Rocket } from 'lucide-react';
 
 const stepLabels = ['Profil', 'Compétences', 'Recherche', 'Rôle', 'Engagement'];
 
@@ -38,7 +39,8 @@ export default function Onboarding() {
     firstName: '',
     lastName: '',
     bio: '',
-    skills: [],
+    primarySkills: [],
+    secondarySkills: [],
     wantedSkills: [],
     role: undefined,
     availability: undefined,
@@ -54,7 +56,8 @@ export default function Onboarding() {
       case 1:
         return data.firstName && data.lastName && data.bio && data.bio.length >= 20;
       case 2:
-        return data.skills && data.skills.length >= 2;
+        // Au moins 1 compétence principale requise
+        return data.primarySkills && data.primarySkills.length >= 1;
       case 3:
         return data.wantedSkills && data.wantedSkills.length >= 1;
       case 4:
@@ -118,8 +121,10 @@ export default function Onboarding() {
           
           {currentStep === 2 && (
             <StepSkills
-              skills={data.skills || []}
-              onSkillsChange={(skills) => updateData('skills', skills as UserSkill[])}
+              primarySkills={data.primarySkills || []}
+              secondarySkills={data.secondarySkills || []}
+              onPrimarySkillsChange={(skills) => updateData('primarySkills', skills)}
+              onSecondarySkillsChange={(skills) => updateData('secondarySkills', skills)}
             />
           )}
           
@@ -219,22 +224,28 @@ function StepProfile({ firstName, lastName, bio, onFirstNameChange, onLastNameCh
   );
 }
 
-function StepSkills({ skills, onSkillsChange }: {
-  skills: UserSkill[];
-  onSkillsChange: (skills: UserSkill[]) => void;
+function StepSkills({ primarySkills, secondarySkills, onPrimarySkillsChange, onSecondarySkillsChange }: {
+  primarySkills: UserSkill[];
+  secondarySkills: UserSkill[];
+  onPrimarySkillsChange: (skills: UserSkill[]) => void;
+  onSecondarySkillsChange: (skills: UserSkill[]) => void;
 }) {
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground mb-2">Vos compétences</h2>
-        <p className="text-muted-foreground">Quelles compétences apportez-vous à une équipe ? (2 à 6 compétences)</p>
+        <p className="text-muted-foreground">
+          Sélectionnez jusqu'à <strong>5 compétences principales</strong> et <strong>5 secondaires</strong>.
+        </p>
       </div>
       
       <SkillSelector
-        mode="offer"
-        selectedSkills={skills}
-        onSkillsChange={onSkillsChange as any}
-        maxSkills={6}
+        primarySkills={primarySkills}
+        secondarySkills={secondarySkills}
+        onPrimarySkillsChange={onPrimarySkillsChange}
+        onSecondarySkillsChange={onSecondarySkillsChange}
+        maxPrimary={5}
+        maxSecondary={5}
       />
     </div>
   );
@@ -248,14 +259,15 @@ function StepWantedSkills({ wantedSkills, onWantedSkillsChange }: {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-foreground mb-2">Ce que vous recherchez</h2>
-        <p className="text-muted-foreground">Quelles compétences recherchez-vous chez un co-fondateur ? (1 à 6 compétences)</p>
+        <p className="text-muted-foreground">
+          Quelles compétences recherchez-vous chez un co-fondateur ? (jusqu'à 5)
+        </p>
       </div>
       
-      <SkillSelector
-        mode="want"
+      <WantedSkillSelector
         selectedSkills={wantedSkills}
-        onSkillsChange={onWantedSkillsChange as any}
-        maxSkills={6}
+        onSkillsChange={onWantedSkillsChange}
+        maxSkills={5}
       />
     </div>
   );

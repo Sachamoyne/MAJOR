@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { MapPin, MoreHorizontal, ArrowLeft } from "lucide-react";
+import { MapPin, MoreHorizontal, ArrowLeft, Linkedin, Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -28,6 +28,8 @@ const userProfile = {
     { name: "Product Manager", priority: "nice-to-have" },
   ],
   availability: "Side Project",
+  linkedIn: "https://linkedin.com/in/alexandremartin",
+  github: "https://github.com/alexandremartin",
 };
 
 const Profile = () => {
@@ -130,7 +132,7 @@ const Profile = () => {
         </div>
 
         {/* Availability */}
-        <div>
+        <div className="mb-10">
           <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
             Disponibilité
           </h2>
@@ -138,6 +140,34 @@ const Profile = () => {
             {userProfile.availability}
           </span>
         </div>
+
+        {/* Social Links */}
+        {(userProfile.linkedIn || userProfile.github) && (
+          <div className="pt-6 border-t border-border/50">
+            <div className="flex items-center justify-center gap-6">
+              {userProfile.linkedIn && (
+                <a
+                  href={userProfile.linkedIn}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 rounded-full border border-border/80 text-foreground/70 hover:text-primary hover:border-primary/30 transition-colors"
+                >
+                  <Linkedin className="h-5 w-5" />
+                </a>
+              )}
+              {userProfile.github && (
+                <a
+                  href={userProfile.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 rounded-full border border-border/80 text-foreground/70 hover:text-primary hover:border-primary/30 transition-colors"
+                >
+                  <Github className="h-5 w-5" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

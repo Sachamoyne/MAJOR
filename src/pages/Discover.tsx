@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MatchCard } from '@/components/MatchCard';
 import { getMockMatches } from '@/data/mockProfiles';
 import { Match } from '@/types';
-import { Users, Filter, SlidersHorizontal } from 'lucide-react';
+import { Users, Filter, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Discover() {
@@ -48,8 +48,8 @@ export default function Discover() {
             <Button variant="ghost" size="icon">
               <Filter className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon">
-              <SlidersHorizontal className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={() => navigate('/profile')}>
+              <User className="w-5 h-5" />
             </Button>
           </div>
         </div>

@@ -86,7 +86,7 @@ const Profile = () => {
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">
             {userProfile.firstName} {userProfile.lastName}, {userProfile.age}
           </h1>
-          <div className="flex items-center gap-1.5 mt-1 text-muted-foreground">
+          <div className="flex items-center gap-1.5 mt-1 text-primary/70">
             <MapPin className="h-3.5 w-3.5" />
             <span className="text-sm">{userProfile.location}</span>
           </div>
@@ -99,14 +99,14 @@ const Profile = () => {
 
         {/* Skills */}
         <div className="mb-8">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-medium text-primary uppercase tracking-wider mb-3">
             Mes compétences
           </h2>
           <div className="flex flex-wrap gap-2">
             {userProfile.skills.map((skill) => (
               <span
                 key={skill.name}
-                className="px-3 py-1.5 text-sm text-foreground bg-secondary/50 rounded-full"
+                className="px-3 py-1.5 text-sm text-foreground bg-secondary rounded-full"
               >
                 {skill.name}
               </span>
@@ -116,14 +116,14 @@ const Profile = () => {
 
         {/* Wanted Skills */}
         <div className="mb-8">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-medium text-primary uppercase tracking-wider mb-3">
             Je recherche
           </h2>
           <div className="flex flex-wrap gap-2">
             {userProfile.wantedSkills.map((skill) => (
               <span
                 key={skill.name}
-                className="px-3 py-1.5 text-sm text-foreground border border-border rounded-full"
+                className="px-3 py-1.5 text-sm text-foreground border border-primary/20 rounded-full"
               >
                 {skill.name}
               </span>
@@ -133,24 +133,24 @@ const Profile = () => {
 
         {/* Availability */}
         <div className="mb-10">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-medium text-primary uppercase tracking-wider mb-3">
             Disponibilité
           </h2>
-          <span className="px-3 py-1.5 text-sm text-primary font-medium border border-primary/20 rounded-full">
+          <span className="px-3 py-1.5 text-sm text-primary font-medium bg-primary/10 rounded-full">
             {userProfile.availability}
           </span>
         </div>
 
         {/* Social Links */}
         {(userProfile.linkedIn || userProfile.github) && (
-          <div className="pt-6 border-t border-border/50">
+          <div className="pt-6 border-t border-primary/10">
             <div className="flex items-center justify-center gap-6">
               {userProfile.linkedIn && (
                 <a
                   href={userProfile.linkedIn}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-full border border-border/80 text-foreground/70 hover:text-primary hover:border-primary/30 transition-colors"
+                  className="p-3 rounded-full border border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
                 >
                   <Linkedin className="h-5 w-5" />
                 </a>
@@ -160,7 +160,7 @@ const Profile = () => {
                   href={userProfile.github}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-3 rounded-full border border-border/80 text-foreground/70 hover:text-primary hover:border-primary/30 transition-colors"
+                  className="p-3 rounded-full border border-primary/20 text-primary/60 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-colors"
                 >
                   <Github className="h-5 w-5" />
                 </a>

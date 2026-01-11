@@ -74,7 +74,7 @@ export function SwipeCard({ profile, onSwipeLeft, onSwipeRight, onTap }: SwipeCa
       <div
         className={cn(
           "absolute top-8 left-6 z-20 px-4 py-2 rounded-lg border-2 font-bold text-xl rotate-[-15deg] transition-opacity",
-          "border-red-500 text-red-500",
+          "border-destructive text-destructive",
           deltaX < -50 ? "opacity-100" : "opacity-0"
         )}
       >
@@ -83,7 +83,7 @@ export function SwipeCard({ profile, onSwipeLeft, onSwipeRight, onTap }: SwipeCa
       <div
         className={cn(
           "absolute top-8 right-6 z-20 px-4 py-2 rounded-lg border-2 font-bold text-xl rotate-[15deg] transition-opacity",
-          "border-green-500 text-green-500",
+          "border-success text-success",
           deltaX > 50 ? "opacity-100" : "opacity-0"
         )}
       >
@@ -111,7 +111,7 @@ export function SwipeCard({ profile, onSwipeLeft, onSwipeRight, onTap }: SwipeCa
               {profile.firstName} {profile.lastName}
             </h2>
             {profile.location && (
-              <div className="flex items-center gap-1.5 mt-1 text-muted-foreground">
+              <div className="flex items-center gap-1.5 mt-1 text-primary/70">
                 <MapPin className="h-3.5 w-3.5" />
                 <span className="text-sm">{profile.location}</span>
               </div>
@@ -125,14 +125,14 @@ export function SwipeCard({ profile, onSwipeLeft, onSwipeRight, onTap }: SwipeCa
 
           {/* Skills */}
           <div className="mb-5">
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider mb-2">
               Compétences
             </h3>
             <div className="flex flex-wrap gap-1.5">
               {profile.skills.slice(0, 4).map((userSkill) => (
                 <span
                   key={userSkill.skill.id}
-                  className="px-2.5 py-1 text-xs text-foreground bg-secondary/50 rounded-full"
+                  className="px-2.5 py-1 text-xs text-foreground bg-secondary rounded-full"
                 >
                   {userSkill.skill.name}
                 </span>
@@ -142,14 +142,14 @@ export function SwipeCard({ profile, onSwipeLeft, onSwipeRight, onTap }: SwipeCa
 
           {/* Wanted Skills */}
           <div>
-            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider mb-2">
               Recherche
             </h3>
             <div className="flex flex-wrap gap-1.5">
               {profile.wantedSkills.slice(0, 3).map((wantedSkill) => (
                 <span
                   key={wantedSkill.skill.id}
-                  className="px-2.5 py-1 text-xs text-foreground border border-border rounded-full"
+                  className="px-2.5 py-1 text-xs text-foreground border border-primary/20 rounded-full"
                 >
                   {wantedSkill.skill.name}
                 </span>

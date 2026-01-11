@@ -1,21 +1,25 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, Star, SlidersHorizontal, Loader2 } from "lucide-react";
+import { X, Heart, Star, User, MessageCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SwipeCard } from "@/components/SwipeCard";
 import { mockProfiles } from "@/data/mockProfiles";
 import { UserProfile } from "@/types";
 import { cn } from "@/lib/utils";
 
-const Matching = () => {
+const Home = () => {
   const navigate = useNavigate();
   const [profiles] = useState<UserProfile[]>(mockProfiles);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isLoading] = useState(false);
   const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(null);
 
   const currentProfile = profiles[currentIndex];
   const hasMoreProfiles = currentIndex < profiles.length;
+
+  // Simulate matching logic - 30% chance of match on like
+  const checkForMatch = (profile: UserProfile) => {
+    return Math.random() < 0.3;
+  };
 
   const handleSwipeLeft = useCallback(() => {
     setExitDirection("left");
@@ -27,11 +31,18 @@ const Matching = () => {
 
   const handleSwipeRight = useCallback(() => {
     setExitDirection("right");
+    const profile = profiles[currentIndex];
+    
     setTimeout(() => {
       setCurrentIndex((prev) => prev + 1);
       setExitDirection(null);
+      
+      // Check if it's a match
+      if (checkForMatch(profile)) {
+        navigate("/match", { state: { matchedProfile: profile } });
+      }
     }, 200);
-  }, []);
+  }, [currentIndex, profiles, navigate]);
 
   const handleTap = useCallback(() => {
     if (currentProfile) {
@@ -41,30 +52,20 @@ const Matching = () => {
 
   const handleSuperLike = useCallback(() => {
     setExitDirection("right");
+    const profile = profiles[currentIndex];
+    
     setTimeout(() => {
       setCurrentIndex((prev) => prev + 1);
       setExitDirection(null);
+      
+      // Super like always matches (for demo)
+      navigate("/match", { state: { matchedProfile: profile } });
     }, 200);
-  }, []);
+  }, [currentIndex, profiles, navigate]);
 
   const resetMatching = () => {
     setCurrentIndex(0);
   };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-full max-w-sm mx-auto px-6">
-            {/* Skeleton card */}
-            <div className="h-[70vh] bg-secondary/30 rounded-2xl animate-pulse" />
-          </div>
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
-  }
 
   // Empty state
   if (!hasMoreProfiles) {
@@ -72,15 +73,25 @@ const Matching = () => {
       <div className="min-h-screen bg-white flex flex-col">
         {/* Header */}
         <header className="px-6 pt-6 pb-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-foreground">Matching</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-foreground/70"
-            onClick={() => navigate("/onboarding")}
-          >
-            <SlidersHorizontal className="h-5 w-5" />
-          </Button>
+          <h1 className="text-lg font-semibold text-foreground">Découvrir</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-foreground/70"
+              onClick={() => navigate("/messages")}
+            >
+              <MessageCircle className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-foreground/70"
+              onClick={() => navigate("/settings")}
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
         </header>
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
@@ -102,6 +113,9 @@ const Matching = () => {
             </Button>
           </div>
         </div>
+
+        {/* Bottom Nav */}
+        <BottomNav currentPath="/home" />
       </div>
     );
   }
@@ -110,15 +124,25 @@ const Matching = () => {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <header className="px-6 pt-6 pb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-foreground">Matching</h1>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-foreground/70"
-          onClick={() => navigate("/onboarding")}
-        >
-          <SlidersHorizontal className="h-5 w-5" />
-        </Button>
+        <h1 className="text-lg font-semibold text-foreground">Découvrir</h1>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-foreground/70"
+            onClick={() => navigate("/messages")}
+          >
+            <MessageCircle className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-foreground/70"
+            onClick={() => navigate("/settings")}
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
       </header>
 
       {/* Card container */}
@@ -142,7 +166,7 @@ const Matching = () => {
       </div>
 
       {/* Action buttons */}
-      <div className="px-6 pb-8 pt-2">
+      <div className="px-6 pb-4 pt-2">
         <div className="flex items-center justify-center gap-4">
           {/* Pass button */}
           <button
@@ -186,8 +210,45 @@ const Matching = () => {
           ))}
         </div>
       </div>
+
+      {/* Bottom Nav */}
+      <BottomNav currentPath="/home" />
     </div>
   );
 };
 
-export default Matching;
+// Bottom Navigation Component
+const BottomNav = ({ currentPath }: { currentPath: string }) => {
+  const navigate = useNavigate();
+  
+  const navItems = [
+    { path: "/home", icon: Heart, label: "Découvrir" },
+    { path: "/messages", icon: MessageCircle, label: "Messages" },
+    { path: "/profile", icon: User, label: "Profil" },
+  ];
+
+  return (
+    <nav className="border-t border-border/50 bg-white px-6 py-3">
+      <div className="flex items-center justify-around">
+        {navItems.map((item) => {
+          const isActive = currentPath === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={cn(
+                "flex flex-col items-center gap-1 px-4 py-1 transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="text-xs font-medium">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+};
+
+export default Home;

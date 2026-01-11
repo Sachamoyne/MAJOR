@@ -10,35 +10,43 @@ import { UserSkill, WantedSkill, Role, Availability, Ambition, OnboardingData } 
 import { cn } from '@/lib/utils';
 import { ArrowLeft, ArrowRight, Users, Clock, Rocket } from 'lucide-react';
 
-const stepLabels = ['Profil', 'Compétences', 'Recherche', 'Rôle', 'Engagement'];
+const stepLabels = ['Infos', 'Rôle', 'Compétences', 'Recherche', 'Ambition'];
 
 const roles: { id: Role; label: string; description: string; icon: React.ReactNode }[] = [
-  { id: 'technical', label: 'Technique', description: 'Développement, data, infrastructure', icon: '💻' },
-  { id: 'product', label: 'Produit', description: 'Product management, UX, design', icon: '📱' },
+  { id: 'technical', label: 'Tech', description: 'Développement, data, infrastructure', icon: '💻' },
+  { id: 'product', label: 'Design', description: 'Product management, UX, design', icon: '📱' },
   { id: 'business', label: 'Business', description: 'Vente, stratégie, finance', icon: '💼' },
-  { id: 'marketing', label: 'Marketing', description: 'Growth, acquisition, branding', icon: '📣' },
-  { id: 'generalist', label: 'Généraliste', description: 'Un peu de tout, flexible', icon: '🔄' },
+  { id: 'generalist', label: 'Autre', description: 'Généraliste ou autre domaine', icon: '🔄' },
 ];
 
 const availabilities: { id: Availability; label: string; description: string }[] = [
   { id: 'full-time', label: 'Temps plein', description: '35h+ par semaine' },
-  { id: 'part-time', label: 'Temps partiel', description: '15-35h par semaine' },
-  { id: 'evenings-weekends', label: 'Soirs & weekends', description: 'Moins de 15h par semaine' },
+  { id: 'part-time', label: 'Side project', description: '10-20h par semaine' },
+  { id: 'evenings-weekends', label: 'Soirs & weekends', description: 'Moins de 10h par semaine' },
 ];
 
 const ambitions: { id: Ambition; label: string; description: string; icon: string }[] = [
-  { id: 'lifestyle', label: 'Lifestyle business', description: 'Indépendance, qualité de vie', icon: '🌴' },
-  { id: 'growth', label: 'Croissance', description: 'Scale-up, levée de fonds possible', icon: '📈' },
-  { id: 'unicorn', label: 'Licorne', description: 'Go big or go home', icon: '🦄' },
+  { id: 'lifestyle', label: 'Side project', description: 'Projet passion, revenus complémentaires', icon: '🌴' },
+  { id: 'growth', label: 'Scale-up', description: 'Croissance, potentielle levée de fonds', icon: '📈' },
+  { id: 'unicorn', label: 'Full-time', description: 'Je veux en faire mon métier', icon: '🚀' },
 ];
+
+interface OnboardingExtendedData extends OnboardingData {
+  age: string;
+  city: string;
+  school: string;
+}
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [data, setData] = useState<Partial<OnboardingData>>({
+  const [data, setData] = useState<Partial<OnboardingExtendedData>>({
     firstName: '',
     lastName: '',
     bio: '',
+    age: '',
+    city: '',
+    school: '',
     primarySkills: [],
     secondarySkills: [],
     wantedSkills: [],
@@ -47,22 +55,26 @@ export default function Onboarding() {
     ambition: undefined,
   });
   
-  const updateData = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
+  const updateData = <K extends keyof OnboardingExtendedData>(key: K, value: OnboardingExtendedData[K]) => {
     setData(prev => ({ ...prev, [key]: value }));
   };
   
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return data.firstName && data.lastName && data.bio && data.bio.length >= 20;
+        // Step 1: Personal info - age, city, school
+        return data.age && data.city && data.school;
       case 2:
-        // Au moins 1 compétence principale requise
-        return data.primarySkills && data.primarySkills.length >= 1;
-      case 3:
-        return data.wantedSkills && data.wantedSkills.length >= 1;
-      case 4:
+        // Step 2: Role
         return data.role;
+      case 3:
+        // Step 3: Skills I have
+        return data.primarySkills && data.primarySkills.length >= 1;
+      case 4:
+        // Step 4: Skills I'm looking for
+        return data.wantedSkills && data.wantedSkills.length >= 1;
       case 5:
+        // Step 5: Ambition & pace
         return data.availability && data.ambition;
       default:
         return false;
@@ -73,8 +85,8 @@ export default function Onboarding() {
     if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Complete onboarding
-      navigate('/discover');
+      // Complete onboarding - go to home (swipe)
+      navigate('/home');
     }
   };
   
@@ -109,17 +121,24 @@ export default function Onboarding() {
       <main className="flex-1 container max-w-2xl mx-auto px-4 py-8">
         <div className="animate-fade-in">
           {currentStep === 1 && (
-            <StepProfile
-              firstName={data.firstName || ''}
-              lastName={data.lastName || ''}
-              bio={data.bio || ''}
-              onFirstNameChange={(v) => updateData('firstName', v)}
-              onLastNameChange={(v) => updateData('lastName', v)}
-              onBioChange={(v) => updateData('bio', v)}
+            <StepPersonalInfo
+              age={data.age || ''}
+              city={data.city || ''}
+              school={data.school || ''}
+              onAgeChange={(v) => updateData('age', v)}
+              onCityChange={(v) => updateData('city', v)}
+              onSchoolChange={(v) => updateData('school', v)}
             />
           )}
           
           {currentStep === 2 && (
+            <StepRole
+              role={data.role}
+              onRoleChange={(role) => updateData('role', role)}
+            />
+          )}
+          
+          {currentStep === 3 && (
             <StepSkills
               primarySkills={data.primarySkills || []}
               secondarySkills={data.secondarySkills || []}
@@ -128,17 +147,10 @@ export default function Onboarding() {
             />
           )}
           
-          {currentStep === 3 && (
+          {currentStep === 4 && (
             <StepWantedSkills
               wantedSkills={data.wantedSkills || []}
               onWantedSkillsChange={(skills) => updateData('wantedSkills', skills as WantedSkill[])}
-            />
-          )}
-          
-          {currentStep === 4 && (
-            <StepRole
-              role={data.role}
-              onRoleChange={(role) => updateData('role', role)}
             />
           )}
           
@@ -174,51 +186,54 @@ export default function Onboarding() {
   );
 }
 
-function StepProfile({ firstName, lastName, bio, onFirstNameChange, onLastNameChange, onBioChange }: {
-  firstName: string;
-  lastName: string;
-  bio: string;
-  onFirstNameChange: (v: string) => void;
-  onLastNameChange: (v: string) => void;
-  onBioChange: (v: string) => void;
+function StepPersonalInfo({ age, city, school, onAgeChange, onCityChange, onSchoolChange }: {
+  age: string;
+  city: string;
+  school: string;
+  onAgeChange: (v: string) => void;
+  onCityChange: (v: string) => void;
+  onSchoolChange: (v: string) => void;
 }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Présentez-vous</h2>
-        <p className="text-muted-foreground">Ces informations seront visibles par vos futurs co-fondateurs.</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Informations personnelles</h2>
+        <p className="text-muted-foreground">Quelques infos pour trouver des co-fondateurs proches de vous.</p>
       </div>
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Prénom</label>
+          <label className="text-sm font-medium text-foreground">Âge</label>
           <Input 
-            value={firstName}
-            onChange={(e) => onFirstNameChange(e.target.value)}
-            placeholder="Votre prénom"
+            type="number"
+            value={age}
+            onChange={(e) => onAgeChange(e.target.value)}
+            placeholder="25"
+            min="18"
+            max="99"
           />
         </div>
+        
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Nom</label>
+          <label className="text-sm font-medium text-foreground">Ville</label>
           <Input 
-            value={lastName}
-            onChange={(e) => onLastNameChange(e.target.value)}
-            placeholder="Votre nom"
+            value={city}
+            onChange={(e) => onCityChange(e.target.value)}
+            placeholder="Paris"
           />
         </div>
-      </div>
-      
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Bio</label>
-        <Textarea 
-          value={bio}
-          onChange={(e) => onBioChange(e.target.value)}
-          placeholder="Parlez de votre parcours, votre expérience et ce qui vous motive à entreprendre..."
-          className="min-h-[120px] resize-none"
-        />
-        <p className="text-xs text-muted-foreground">
-          {bio.length}/500 caractères (minimum 20)
-        </p>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">École / Entreprise</label>
+          <Input 
+            value={school}
+            onChange={(e) => onSchoolChange(e.target.value)}
+            placeholder="HEC, 42, Google..."
+          />
+          <p className="text-xs text-muted-foreground">
+            Votre école actuelle ou votre entreprise
+          </p>
+        </div>
       </div>
     </div>
   );

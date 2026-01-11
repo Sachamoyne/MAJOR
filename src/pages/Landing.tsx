@@ -33,7 +33,7 @@ export default function Landing() {
           
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight animate-slide-up">
             Trouvez le co-fondateur
-            <span className="block text-gradient-accent">qui vous complète</span>
+            <span className="block text-primary">qui vous complète</span>
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: '100ms' }}>

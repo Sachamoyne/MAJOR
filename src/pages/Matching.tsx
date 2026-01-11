@@ -147,7 +147,7 @@ const Matching = () => {
           {/* Pass button */}
           <button
             onClick={handleSwipeLeft}
-            className="w-14 h-14 rounded-full border-2 border-red-200 flex items-center justify-center text-red-400 hover:bg-red-50 hover:border-red-300 hover:text-red-500 transition-colors"
+            className="w-14 h-14 rounded-full border-2 border-destructive/30 flex items-center justify-center text-destructive/60 hover:bg-destructive/5 hover:border-destructive/50 hover:text-destructive transition-colors"
           >
             <X className="h-7 w-7" />
           </button>
@@ -155,7 +155,7 @@ const Matching = () => {
           {/* Super Like button */}
           <button
             onClick={handleSuperLike}
-            className="w-11 h-11 rounded-full border-2 border-blue-200 flex items-center justify-center text-blue-400 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-500 transition-colors"
+            className="w-11 h-11 rounded-full border-2 border-primary/30 flex items-center justify-center text-primary/60 hover:bg-primary/5 hover:border-primary/50 hover:text-primary transition-colors"
           >
             <Star className="h-5 w-5" />
           </button>
@@ -163,7 +163,7 @@ const Matching = () => {
           {/* Like button */}
           <button
             onClick={handleSwipeRight}
-            className="w-14 h-14 rounded-full border-2 border-green-200 flex items-center justify-center text-green-400 hover:bg-green-50 hover:border-green-300 hover:text-green-500 transition-colors"
+            className="w-14 h-14 rounded-full border-2 border-success/30 flex items-center justify-center text-success/60 hover:bg-success/5 hover:border-success/50 hover:text-success transition-colors"
           >
             <Heart className="h-7 w-7" />
           </button>
@@ -177,10 +177,10 @@ const Matching = () => {
               className={cn(
                 "h-1 rounded-full transition-all",
                 idx === currentIndex
-                  ? "w-6 bg-foreground"
+                  ? "w-6 bg-primary"
                   : idx < currentIndex
-                  ? "w-2 bg-foreground/30"
-                  : "w-2 bg-foreground/10"
+                  ? "w-2 bg-primary/30"
+                  : "w-2 bg-primary/10"
               )}
             />
           ))}

@@ -1,18 +1,38 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Heart, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { UserProfile } from "@/types";
+import { MatchProfile } from "@/hooks/useMatching";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
+import { useMatches } from "@/hooks/useMatching";
 
 const MatchScreen = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const matchedProfile = location.state?.matchedProfile as UserProfile | undefined;
+  const { user } = useAuth();
+  const { data: myProfile } = useProfile();
+  const { data: matches } = useMatches();
+  
+  const matchedProfile = location.state?.matchedProfile as MatchProfile | undefined;
 
-  const avatarUrl = matchedProfile?.avatar || 
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${matchedProfile?.firstName || 'match'}`;
+  // Find the match to get the match ID
+  const match = matches?.find(m => 
+    m.other_profile?.user_id === matchedProfile?.user_id
+  );
 
-  // Fake current user avatar
-  const currentUserAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=currentuser";
+  const avatarUrl = matchedProfile?.avatar_url || 
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${matchedProfile?.name || 'match'}`;
+
+  const currentUserAvatar = myProfile?.avatar_url ||
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${myProfile?.name || user?.id || 'currentuser'}`;
+
+  const handleStartChat = () => {
+    if (match) {
+      navigate("/messages", { state: { matchId: match.id, matchedProfile } });
+    } else {
+      navigate("/messages", { state: { matchedProfile } });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-primary flex flex-col items-center justify-center px-6 text-center">
@@ -37,7 +57,7 @@ const MatchScreen = () => {
         </h1>
         <p className="text-white/80 text-sm mb-10 max-w-xs animate-fade-in" style={{ animationDelay: '100ms' }}>
           {matchedProfile 
-            ? `Toi et ${matchedProfile.firstName} avez matché. Lancez la conversation !`
+            ? `Toi et ${matchedProfile.name || 'ce profil'} avez matché. Lancez la conversation !`
             : "Vous avez un nouveau match. Lancez la conversation !"
           }
         </p>
@@ -62,7 +82,7 @@ const MatchScreen = () => {
             <div className="w-28 h-28 rounded-full border-4 border-white/30 overflow-hidden bg-white/10">
               <img 
                 src={avatarUrl} 
-                alt={matchedProfile?.firstName || "Match"}
+                alt={matchedProfile?.name || "Match"}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -71,7 +91,7 @@ const MatchScreen = () => {
 
         {/* CTA */}
         <Button
-          onClick={() => navigate("/messages", { state: { matchedProfile } })}
+          onClick={handleStartChat}
           className="bg-white text-primary hover:bg-white/90 font-semibold px-8 py-6 rounded-full text-base animate-slide-up"
           style={{ animationDelay: '300ms' }}
         >

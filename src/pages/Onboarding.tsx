@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { OnboardingProgress } from '@/components/OnboardingProgress';
-import { SkillSelector } from '@/components/SkillSelector';
-import { WantedSkillSelector } from '@/components/WantedSkillSelector';
-import { UserSkill, WantedSkill, Role, Availability, Ambition, OnboardingData } from '@/types';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, ArrowRight, Users, Clock, Rocket } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Users, Clock, Rocket, CheckCircle } from 'lucide-react';
+import { useUpdateProfile, useAllSkills, useUpdateUserSkills, useProfile } from '@/hooks/useProfile';
+import { toast } from 'sonner';
 
 const stepLabels = ['Infos', 'Rôle', 'Compétences', 'Recherche', 'Ambition'];
 
-const roles: { id: Role; label: string; description: string; icon: React.ReactNode }[] = [
+type Role = 'technical' | 'product' | 'business' | 'generalist';
+type Availability = 'full-time' | 'part-time' | 'evenings-weekends';
+type Objective = 'find-cofounder' | 'join-project';
+
+const roles: { id: Role; label: string; description: string; icon: string }[] = [
   { id: 'technical', label: 'Tech', description: 'Développement, data, infrastructure', icon: '💻' },
   { id: 'product', label: 'Design', description: 'Product management, UX, design', icon: '📱' },
   { id: 'business', label: 'Business', description: 'Vente, stratégie, finance', icon: '💼' },
@@ -25,68 +27,107 @@ const availabilities: { id: Availability; label: string; description: string }[]
   { id: 'evenings-weekends', label: 'Soirs & weekends', description: 'Moins de 10h par semaine' },
 ];
 
-const ambitions: { id: Ambition; label: string; description: string; icon: string }[] = [
-  { id: 'lifestyle', label: 'Side project', description: 'Projet passion, revenus complémentaires', icon: '🌴' },
-  { id: 'growth', label: 'Scale-up', description: 'Croissance, potentielle levée de fonds', icon: '📈' },
-  { id: 'unicorn', label: 'Full-time', description: 'Je veux en faire mon métier', icon: '🚀' },
+const objectives: { id: Objective; label: string; description: string; icon: string }[] = [
+  { id: 'find-cofounder', label: 'Trouver un co-fondateur', description: "J'ai une idée et je cherche quelqu'un", icon: '🎯' },
+  { id: 'join-project', label: 'Rejoindre un projet', description: 'Je veux rejoindre une équipe existante', icon: '🤝' },
 ];
 
-interface OnboardingExtendedData extends OnboardingData {
+interface OnboardingData {
+  name: string;
   age: string;
   city: string;
   school: string;
+  role: Role | null;
+  ownedSkillIds: string[];
+  wantedSkillIds: string[];
+  availability: Availability | null;
+  objective: Objective | null;
 }
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { data: profile } = useProfile();
+  const { data: allSkills, isLoading: skillsLoading } = useAllSkills();
+  const updateProfile = useUpdateProfile();
+  const updateSkills = useUpdateUserSkills();
+  
   const [currentStep, setCurrentStep] = useState(1);
-  const [data, setData] = useState<Partial<OnboardingExtendedData>>({
-    firstName: '',
-    lastName: '',
-    bio: '',
+  const [data, setData] = useState<OnboardingData>({
+    name: '',
     age: '',
     city: '',
     school: '',
-    primarySkills: [],
-    secondarySkills: [],
-    wantedSkills: [],
-    role: undefined,
-    availability: undefined,
-    ambition: undefined,
+    role: null,
+    ownedSkillIds: [],
+    wantedSkillIds: [],
+    availability: null,
+    objective: null,
   });
+
+  // Pre-fill with existing profile data
+  useEffect(() => {
+    if (profile) {
+      setData(prev => ({
+        ...prev,
+        name: profile.name || '',
+        age: profile.age?.toString() || '',
+        city: profile.city || '',
+        school: profile.school || '',
+        role: profile.role as Role || null,
+        availability: profile.availability as Availability || null,
+        objective: profile.objective as Objective || null,
+      }));
+    }
+  }, [profile]);
   
-  const updateData = <K extends keyof OnboardingExtendedData>(key: K, value: OnboardingExtendedData[K]) => {
+  const updateData = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
     setData(prev => ({ ...prev, [key]: value }));
   };
   
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        // Step 1: Personal info - age, city, school
-        return data.age && data.city && data.school;
+        return data.name && data.age && data.city && data.school;
       case 2:
-        // Step 2: Role
         return data.role;
       case 3:
-        // Step 3: Skills I have
-        return data.primarySkills && data.primarySkills.length >= 1;
+        return data.ownedSkillIds.length >= 1;
       case 4:
-        // Step 4: Skills I'm looking for
-        return data.wantedSkills && data.wantedSkills.length >= 1;
+        return data.wantedSkillIds.length >= 1;
       case 5:
-        // Step 5: Ambition & pace
-        return data.availability && data.ambition;
+        return data.availability && data.objective;
       default:
         return false;
     }
   };
   
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Complete onboarding - go to home (swipe)
-      navigate('/home');
+      // Save all data to database
+      try {
+        await updateProfile.mutateAsync({
+          name: data.name,
+          age: parseInt(data.age),
+          city: data.city,
+          school: data.school,
+          role: data.role,
+          availability: data.availability,
+          objective: data.objective,
+          is_active: true,
+        });
+
+        await updateSkills.mutateAsync({
+          ownedSkillIds: data.ownedSkillIds,
+          wantedSkillIds: data.wantedSkillIds,
+        });
+
+        toast.success('Profil complété avec succès !');
+        navigate('/home');
+      } catch (error) {
+        toast.error('Erreur lors de la sauvegarde');
+      }
     }
   };
   
@@ -97,6 +138,14 @@ export default function Onboarding() {
       navigate('/');
     }
   };
+
+  // Group skills by category
+  const skillsByCategory = allSkills?.reduce((acc, skill) => {
+    const category = skill.category || 'Other';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(skill);
+    return acc;
+  }, {} as Record<string, typeof allSkills>);
   
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
@@ -122,9 +171,11 @@ export default function Onboarding() {
         <div className="animate-fade-in">
           {currentStep === 1 && (
             <StepPersonalInfo
-              age={data.age || ''}
-              city={data.city || ''}
-              school={data.school || ''}
+              name={data.name}
+              age={data.age}
+              city={data.city}
+              school={data.school}
+              onNameChange={(v) => updateData('name', v)}
               onAgeChange={(v) => updateData('age', v)}
               onCityChange={(v) => updateData('city', v)}
               onSchoolChange={(v) => updateData('school', v)}
@@ -140,26 +191,34 @@ export default function Onboarding() {
           
           {currentStep === 3 && (
             <StepSkills
-              primarySkills={data.primarySkills || []}
-              secondarySkills={data.secondarySkills || []}
-              onPrimarySkillsChange={(skills) => updateData('primarySkills', skills)}
-              onSecondarySkillsChange={(skills) => updateData('secondarySkills', skills)}
+              title="Vos compétences"
+              description="Sélectionnez les compétences que vous maîtrisez (jusqu'à 5)"
+              selectedSkillIds={data.ownedSkillIds}
+              onSkillsChange={(ids) => updateData('ownedSkillIds', ids)}
+              skillsByCategory={skillsByCategory || {}}
+              loading={skillsLoading}
+              maxSkills={5}
             />
           )}
           
           {currentStep === 4 && (
-            <StepWantedSkills
-              wantedSkills={data.wantedSkills || []}
-              onWantedSkillsChange={(skills) => updateData('wantedSkills', skills as WantedSkill[])}
+            <StepSkills
+              title="Ce que vous recherchez"
+              description="Quelles compétences recherchez-vous chez un co-fondateur ? (jusqu'à 5)"
+              selectedSkillIds={data.wantedSkillIds}
+              onSkillsChange={(ids) => updateData('wantedSkillIds', ids)}
+              skillsByCategory={skillsByCategory || {}}
+              loading={skillsLoading}
+              maxSkills={5}
             />
           )}
           
           {currentStep === 5 && (
             <StepEngagement
               availability={data.availability}
-              ambition={data.ambition}
+              objective={data.objective}
               onAvailabilityChange={(v) => updateData('availability', v)}
-              onAmbitionChange={(v) => updateData('ambition', v)}
+              onObjectiveChange={(v) => updateData('objective', v)}
             />
           )}
         </div>
@@ -173,11 +232,15 @@ export default function Onboarding() {
             Retour
           </Button>
           <Button 
-            variant="accent" 
             onClick={handleNext}
-            disabled={!canProceed()}
+            disabled={!canProceed() || updateProfile.isPending || updateSkills.isPending}
           >
-            {currentStep === 5 ? 'Terminer' : 'Continuer'}
+            {updateProfile.isPending || updateSkills.isPending 
+              ? 'Sauvegarde...' 
+              : currentStep === 5 
+                ? 'Terminer' 
+                : 'Continuer'
+            }
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
@@ -186,10 +249,12 @@ export default function Onboarding() {
   );
 }
 
-function StepPersonalInfo({ age, city, school, onAgeChange, onCityChange, onSchoolChange }: {
+function StepPersonalInfo({ name, age, city, school, onNameChange, onAgeChange, onCityChange, onSchoolChange }: {
+  name: string;
   age: string;
   city: string;
   school: string;
+  onNameChange: (v: string) => void;
   onAgeChange: (v: string) => void;
   onCityChange: (v: string) => void;
   onSchoolChange: (v: string) => void;
@@ -202,6 +267,15 @@ function StepPersonalInfo({ age, city, school, onAgeChange, onCityChange, onScho
       </div>
       
       <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Prénom</label>
+          <Input 
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="Thomas"
+          />
+        </div>
+
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Âge</label>
           <Input 
@@ -239,57 +313,8 @@ function StepPersonalInfo({ age, city, school, onAgeChange, onCityChange, onScho
   );
 }
 
-function StepSkills({ primarySkills, secondarySkills, onPrimarySkillsChange, onSecondarySkillsChange }: {
-  primarySkills: UserSkill[];
-  secondarySkills: UserSkill[];
-  onPrimarySkillsChange: (skills: UserSkill[]) => void;
-  onSecondarySkillsChange: (skills: UserSkill[]) => void;
-}) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Vos compétences</h2>
-        <p className="text-muted-foreground">
-          Sélectionnez jusqu'à <strong>5 compétences principales</strong> et <strong>5 secondaires</strong>.
-        </p>
-      </div>
-      
-      <SkillSelector
-        primarySkills={primarySkills}
-        secondarySkills={secondarySkills}
-        onPrimarySkillsChange={onPrimarySkillsChange}
-        onSecondarySkillsChange={onSecondarySkillsChange}
-        maxPrimary={5}
-        maxSecondary={5}
-      />
-    </div>
-  );
-}
-
-function StepWantedSkills({ wantedSkills, onWantedSkillsChange }: {
-  wantedSkills: WantedSkill[];
-  onWantedSkillsChange: (skills: WantedSkill[]) => void;
-}) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Ce que vous recherchez</h2>
-        <p className="text-muted-foreground">
-          Quelles compétences recherchez-vous chez un co-fondateur ? (jusqu'à 5)
-        </p>
-      </div>
-      
-      <WantedSkillSelector
-        selectedSkills={wantedSkills}
-        onSkillsChange={onWantedSkillsChange}
-        maxSkills={5}
-      />
-    </div>
-  );
-}
-
 function StepRole({ role, onRoleChange }: {
-  role?: Role;
+  role: Role | null;
   onRoleChange: (role: Role) => void;
 }) {
   return (
@@ -330,11 +355,85 @@ function StepRole({ role, onRoleChange }: {
   );
 }
 
-function StepEngagement({ availability, ambition, onAvailabilityChange, onAmbitionChange }: {
-  availability?: Availability;
-  ambition?: Ambition;
+function StepSkills({ title, description, selectedSkillIds, onSkillsChange, skillsByCategory, loading, maxSkills }: {
+  title: string;
+  description: string;
+  selectedSkillIds: string[];
+  onSkillsChange: (ids: string[]) => void;
+  skillsByCategory: Record<string, { id: string; name: string; category: string | null }[]>;
+  loading: boolean;
+  maxSkills: number;
+}) {
+  const toggleSkill = (skillId: string) => {
+    if (selectedSkillIds.includes(skillId)) {
+      onSkillsChange(selectedSkillIds.filter(id => id !== skillId));
+    } else if (selectedSkillIds.length < maxSkills) {
+      onSkillsChange([...selectedSkillIds, skillId]);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground mb-2">{title}</h2>
+          <p className="text-muted-foreground">{description}</p>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-foreground mb-2">{title}</h2>
+        <p className="text-muted-foreground">{description}</p>
+        <p className="text-sm text-primary mt-2">
+          {selectedSkillIds.length}/{maxSkills} sélectionnées
+        </p>
+      </div>
+      
+      <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
+        {Object.entries(skillsByCategory).map(([category, skills]) => (
+          <div key={category}>
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">{category}</h3>
+            <div className="flex flex-wrap gap-2">
+              {skills.map((skill) => {
+                const isSelected = selectedSkillIds.includes(skill.id);
+                return (
+                  <button
+                    key={skill.id}
+                    onClick={() => toggleSkill(skill.id)}
+                    disabled={!isSelected && selectedSkillIds.length >= maxSkills}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-sm transition-all duration-200 flex items-center gap-1.5",
+                      isSelected
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-foreground hover:bg-secondary/80",
+                      !isSelected && selectedSkillIds.length >= maxSkills && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    {isSelected && <CheckCircle className="w-3.5 h-3.5" />}
+                    {skill.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StepEngagement({ availability, objective, onAvailabilityChange, onObjectiveChange }: {
+  availability: Availability | null;
+  objective: Objective | null;
   onAvailabilityChange: (v: Availability) => void;
-  onAmbitionChange: (v: Ambition) => void;
+  onObjectiveChange: (v: Objective) => void;
 }) {
   return (
     <div className="space-y-8">
@@ -373,33 +472,33 @@ function StepEngagement({ availability, ambition, onAvailabilityChange, onAmbiti
         </div>
       </div>
       
-      {/* Ambition */}
+      {/* Objective */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Rocket className="w-5 h-5 text-muted-foreground" />
-          <p className="font-medium text-foreground">Ambition</p>
+          <p className="font-medium text-foreground">Objectif</p>
         </div>
         <div className="grid gap-2">
-          {ambitions.map((a) => (
+          {objectives.map((o) => (
             <button
-              key={a.id}
-              onClick={() => onAmbitionChange(a.id)}
+              key={o.id}
+              onClick={() => onObjectiveChange(o.id)}
               className={cn(
                 "p-3 rounded-lg border text-left transition-all duration-200",
-                ambition === a.id 
+                objective === o.id 
                   ? "bg-primary text-primary-foreground border-primary" 
                   : "bg-card border-border hover:border-primary/50"
               )}
             >
               <div className="flex items-center gap-2">
-                <span>{a.icon}</span>
+                <span>{o.icon}</span>
                 <div>
-                  <p className="font-medium">{a.label}</p>
+                  <p className="font-medium">{o.label}</p>
                   <p className={cn(
                     "text-sm",
-                    ambition === a.id ? "text-primary-foreground/80" : "text-muted-foreground"
+                    objective === o.id ? "text-primary-foreground/80" : "text-muted-foreground"
                   )}>
-                    {a.description}
+                    {o.description}
                   </p>
                 </div>
               </div>

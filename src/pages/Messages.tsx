@@ -1,27 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Send, Sparkles } from "lucide-react";
+import { ArrowLeft, Send, Sparkles, MessageCircle, User, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserProfile } from "@/types";
 import { cn } from "@/lib/utils";
-
-interface Message {
-  id: string;
-  text: string;
-  sender: "user" | "match";
-  timestamp: Date;
-}
-
-interface Conversation {
-  matchId: string;
-  matchProfile: UserProfile;
-  messages: Message[];
-  lastActivity: Date;
-}
-
-// Mock conversations for demo
-const mockConversations: Conversation[] = [];
+import { useAuth } from "@/contexts/AuthContext";
+import { useMatches, MatchProfile } from "@/hooks/useMatching";
+import { useMessages, useSendMessage } from "@/hooks/useMessages";
 
 // Icebreaker suggestions
 const icebreakers = [
@@ -35,12 +20,19 @@ const icebreakers = [
 const Messages = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const matchedProfile = location.state?.matchedProfile as UserProfile | undefined;
+  const { user } = useAuth();
   
-  const [conversations] = useState<Conversation[]>(mockConversations);
-  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const matchedProfile = location.state?.matchedProfile as MatchProfile | undefined;
+  const matchIdFromState = location.state?.matchId as string | undefined;
+  
+  const { data: matches, isLoading: matchesLoading } = useMatches();
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(matchIdFromState || null);
+  const [selectedProfile, setSelectedProfile] = useState<MatchProfile | null>(matchedProfile || null);
+  
+  const { data: messages, isLoading: messagesLoading } = useMessages(selectedMatchId);
+  const sendMessage = useSendMessage();
+  
   const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -51,67 +43,68 @@ const Messages = () => {
     scrollToBottom();
   }, [messages]);
 
-  // If coming from a match, create a new conversation view
+  // If coming from match screen with a matched profile, find the match
   useEffect(() => {
-    if (matchedProfile && !activeConversation) {
-      setActiveConversation({
-        matchId: matchedProfile.id,
-        matchProfile: matchedProfile,
-        messages: [],
-        lastActivity: new Date(),
-      });
+    if (matchedProfile && matches && !selectedMatchId) {
+      const match = matches.find(m => 
+        m.other_profile?.user_id === matchedProfile.user_id
+      );
+      if (match) {
+        setSelectedMatchId(match.id);
+        setSelectedProfile(match.other_profile || null);
+      }
     }
-  }, [matchedProfile, activeConversation]);
+  }, [matchedProfile, matches, selectedMatchId]);
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-    
-    const message: Message = {
-      id: Date.now().toString(),
-      text: newMessage,
-      sender: "user",
-      timestamp: new Date(),
-    };
-    
-    setMessages([...messages, message]);
-    setNewMessage("");
+  const handleSelectMatch = (matchId: string, profile: MatchProfile | undefined) => {
+    setSelectedMatchId(matchId);
+    setSelectedProfile(profile || null);
+  };
 
-    // Simulate response after 1-2 seconds
-    setTimeout(() => {
-      const responses = [
-        "Super question ! J'y réfléchis...",
-        "Intéressant ! On devrait en discuter plus.",
-        "Exactement ce que je me demandais aussi !",
-        "J'adore cette énergie ! 🚀",
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        text: randomResponse,
-        sender: "match",
-        timestamp: new Date(),
-      }]);
-    }, 1000 + Math.random() * 1000);
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !selectedMatchId) return;
+    
+    try {
+      await sendMessage.mutateAsync({
+        matchId: selectedMatchId,
+        content: newMessage.trim(),
+      });
+      setNewMessage("");
+    } catch (error) {
+      // Error handling is done in the mutation
+    }
   };
 
   const handleIcebreaker = (text: string) => {
     setNewMessage(text);
   };
 
-  const avatarUrl = activeConversation?.matchProfile?.avatar || 
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${activeConversation?.matchProfile?.firstName || 'match'}`;
+  const avatarUrl = selectedProfile?.avatar_url || 
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedProfile?.name || 'match'}`;
 
-  // If no active conversation and no conversations exist
-  if (!activeConversation && conversations.length === 0) {
+  // Loading state
+  if (matchesLoading) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
-        {/* Header */}
         <header className="px-4 pt-6 pb-4 border-b border-border/50 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/home")}
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate("/home")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold text-foreground">Messages</h1>
+        </header>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  // No matches yet
+  if (!matches || matches.length === 0) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <header className="px-4 pt-6 pb-4 border-b border-border/50 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/home")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-lg font-semibold text-foreground">Messages</h1>
@@ -119,10 +112,10 @@ const Messages = () => {
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
           <div className="w-20 h-20 rounded-full bg-secondary/50 flex items-center justify-center mb-6">
-            <Send className="h-8 w-8 text-muted-foreground" />
+            <MessageCircle className="h-8 w-8 text-muted-foreground" />
           </div>
           <h2 className="text-xl font-semibold text-foreground mb-2">
-            Pas encore de messages
+            Pas encore de matchs
           </h2>
           <p className="text-muted-foreground text-sm mb-8 max-w-xs">
             Swipez et matchez pour commencer à discuter avec des co-fondateurs potentiels.
@@ -131,6 +124,57 @@ const Messages = () => {
             Découvrir des profils
           </Button>
         </div>
+
+        <BottomNav currentPath="/messages" />
+      </div>
+    );
+  }
+
+  // Conversation list (if no conversation selected)
+  if (!selectedMatchId) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <header className="px-4 pt-6 pb-4 border-b border-border/50 flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/home")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold text-foreground">Messages</h1>
+        </header>
+
+        <div className="flex-1 overflow-y-auto">
+          {matches.map((match) => {
+            const profile = match.other_profile;
+            const avatar = profile?.avatar_url || 
+              `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.name || match.user_2}`;
+            
+            return (
+              <button
+                key={match.id}
+                onClick={() => handleSelectMatch(match.id, profile)}
+                className="w-full flex items-center gap-3 p-4 hover:bg-secondary/50 transition-colors border-b border-border/30"
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-secondary">
+                  <img 
+                    src={avatar} 
+                    alt={profile?.name || 'Match'}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-foreground">
+                    {profile?.name || 'Anonyme'}
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    Tap pour discuter
+                  </p>
+                </div>
+                <Heart className="h-4 w-4 text-primary" />
+              </button>
+            );
+          })}
+        </div>
+
+        <BottomNav currentPath="/messages" />
       </div>
     );
   }
@@ -143,29 +187,31 @@ const Messages = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/home")}
+          onClick={() => {
+            setSelectedMatchId(null);
+            setSelectedProfile(null);
+          }}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         
-        {activeConversation && (
+        {selectedProfile && (
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary">
               <img 
                 src={avatarUrl} 
-                alt={activeConversation.matchProfile.firstName}
+                alt={selectedProfile.name || 'Match'}
                 className="w-full h-full object-cover"
               />
             </div>
             <div>
               <h1 className="text-base font-semibold text-foreground">
-                {activeConversation.matchProfile.firstName}
+                {selectedProfile.name || 'Anonyme'}
               </h1>
               <p className="text-xs text-muted-foreground">
-                {activeConversation.matchProfile.role === 'technical' ? 'Tech' : 
-                 activeConversation.matchProfile.role === 'business' ? 'Business' :
-                 activeConversation.matchProfile.role === 'product' ? 'Produit' :
-                 activeConversation.matchProfile.role === 'marketing' ? 'Marketing' : 'Généraliste'}
+                {selectedProfile.role === 'technical' ? 'Tech' : 
+                 selectedProfile.role === 'business' ? 'Business' :
+                 selectedProfile.role === 'product' ? 'Produit' : 'Généraliste'}
               </p>
             </div>
           </div>
@@ -174,10 +220,14 @@ const Messages = () => {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {messages.length === 0 ? (
+        {messagesLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+          </div>
+        ) : messages && messages.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground text-sm mb-6">
-              Lancez la conversation avec {activeConversation?.matchProfile.firstName}
+              Lancez la conversation avec {selectedProfile?.name || 'votre match'}
             </p>
             
             {/* Icebreakers */}
@@ -200,23 +250,23 @@ const Messages = () => {
             </div>
           </div>
         ) : (
-          messages.map((message) => (
+          messages?.map((message) => (
             <div
               key={message.id}
               className={cn(
                 "flex",
-                message.sender === "user" ? "justify-end" : "justify-start"
+                message.sender_id === user?.id ? "justify-end" : "justify-start"
               )}
             >
               <div
                 className={cn(
                   "max-w-[80%] px-4 py-2.5 rounded-2xl text-sm",
-                  message.sender === "user"
+                  message.sender_id === user?.id
                     ? "bg-primary text-primary-foreground rounded-br-md"
                     : "bg-secondary text-foreground rounded-bl-md"
                 )}
               >
-                {message.text}
+                {message.content}
               </div>
             </div>
           ))
@@ -237,7 +287,7 @@ const Messages = () => {
           <Button
             size="icon"
             onClick={handleSendMessage}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || sendMessage.isPending}
             className="rounded-full"
           >
             <Send className="h-4 w-4" />
@@ -245,6 +295,40 @@ const Messages = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+// Bottom Navigation Component
+const BottomNav = ({ currentPath }: { currentPath: string }) => {
+  const navigate = useNavigate();
+  
+  const navItems = [
+    { path: "/home", icon: Heart, label: "Découvrir" },
+    { path: "/messages", icon: MessageCircle, label: "Messages" },
+    { path: "/profile", icon: User, label: "Profil" },
+  ];
+
+  return (
+    <nav className="border-t border-border/50 bg-white px-6 py-3">
+      <div className="flex items-center justify-around">
+        {navItems.map((item) => {
+          const isActive = currentPath === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={cn(
+                "flex flex-col items-center gap-1 px-4 py-1 transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="text-xs font-medium">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 };
 

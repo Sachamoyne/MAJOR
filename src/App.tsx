@@ -3,7 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Landing from "./pages/Landing";
+import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
@@ -17,40 +20,73 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Landing (Web) */}
-          <Route path="/" element={<Landing />} />
-          
-          {/* Onboarding (multi-step) */}
-          <Route path="/onboarding" element={<Onboarding />} />
-          
-          {/* Home - Swipe (Core feature) */}
-          <Route path="/home" element={<Home />} />
-          
-          {/* Profile detail (before match) */}
-          <Route path="/profile/:id" element={<ProfileView />} />
-          
-          {/* Match screen */}
-          <Route path="/match" element={<MatchScreen />} />
-          
-          {/* Messaging */}
-          <Route path="/messages" element={<Messages />} />
-          
-          {/* My profile (DO NOT CHANGE) */}
-          <Route path="/profile" element={<Profile />} />
-          
-          {/* Settings */}
-          <Route path="/settings" element={<Settings />} />
-          
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Landing (Web) */}
+            <Route path="/" element={<Landing />} />
+            
+            {/* Auth */}
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Onboarding (multi-step) - Protected */}
+            <Route path="/onboarding" element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            } />
+            
+            {/* Home - Swipe (Core feature) - Protected */}
+            <Route path="/home" element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            } />
+            
+            {/* Profile detail (before match) - Protected */}
+            <Route path="/profile/:id" element={
+              <ProtectedRoute>
+                <ProfileView />
+              </ProtectedRoute>
+            } />
+            
+            {/* Match screen - Protected */}
+            <Route path="/match" element={
+              <ProtectedRoute>
+                <MatchScreen />
+              </ProtectedRoute>
+            } />
+            
+            {/* Messaging - Protected */}
+            <Route path="/messages" element={
+              <ProtectedRoute>
+                <Messages />
+              </ProtectedRoute>
+            } />
+            
+            {/* My profile (DO NOT CHANGE) - Protected */}
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
+            
+            {/* Settings - Protected */}
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            } />
+            
+            {/* 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

@@ -2,9 +2,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Users, Target, Zap, CheckCircle2, Sparkles } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  // Redirect authenticated users to home
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/home');
+    }
+  }, [user, loading, navigate]);
   
   return (
     <div className="min-h-screen bg-gradient-hero">
@@ -17,9 +27,14 @@ export default function Landing() {
             </div>
             <span className="font-semibold text-lg text-foreground">CoFounder</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate('/onboarding')}>
-            S'inscrire
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate('/auth')}>
+              Se connecter
+            </Button>
+            <Button variant="default" onClick={() => navigate('/auth')}>
+              S'inscrire
+            </Button>
+          </div>
         </div>
       </header>
       
@@ -44,14 +59,14 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '200ms' }}>
             <Button 
               variant="hero" 
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigate('/auth')}
             >
               Trouver un co-fondateur
               <ArrowRight className="w-5 h-5" />
             </Button>
             <Button 
               variant="hero-secondary"
-              onClick={() => navigate('/onboarding')}
+              onClick={() => navigate('/auth')}
             >
               S'inscrire
             </Button>
@@ -172,7 +187,7 @@ export default function Landing() {
           <Button 
             variant="accent"
             size="xl"
-            onClick={() => navigate('/onboarding')}
+            onClick={() => navigate('/auth')}
           >
             Trouver un co-fondateur
             <ArrowRight className="w-5 h-5" />

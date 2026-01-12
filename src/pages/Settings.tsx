@@ -8,7 +8,9 @@ import {
   LogOut, 
   Trash2,
   ChevronRight,
-  Shield
+  Shield,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -25,6 +27,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SettingItemProps {
   icon: React.ReactNode;
@@ -67,20 +72,50 @@ const SettingItem = ({ icon, title, description, onClick, trailing, destructive 
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { signOut, user } = useAuth();
+  const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
+  
   const [notifications, setNotifications] = useState({
     newMatch: true,
     messages: true,
     appUpdates: false,
   });
 
-  const handleLogout = () => {
+  const handleToggleActive = async (checked: boolean) => {
+    try {
+      await updateProfile.mutateAsync({ is_active: checked });
+      toast.success(checked ? 'Profil visible' : 'Profil masqué');
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
     toast.success("Déconnexion réussie");
     navigate("/");
   };
 
-  const handleDeleteAccount = () => {
-    toast.success("Compte supprimé");
-    navigate("/");
+  const handleDeleteAccount = async () => {
+    try {
+      // Delete profile first (cascade will handle related data)
+      if (user) {
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('user_id', user.id);
+        
+        if (error) throw error;
+      }
+      
+      // Sign out
+      await signOut();
+      toast.success("Compte supprimé");
+      navigate("/");
+    } catch (error) {
+      toast.error("Erreur lors de la suppression");
+    }
   };
 
   return (
@@ -99,8 +134,29 @@ const Settings = () => {
 
       {/* Content */}
       <main className="pb-12">
-        {/* Matching Preferences */}
+        {/* Profile Visibility */}
         <section className="pt-6">
+          <h2 className="px-4 text-xs font-medium text-primary uppercase tracking-wider mb-2">
+            Visibilité du profil
+          </h2>
+          <div className="border-y border-border/50 bg-white">
+            <SettingItem
+              icon={profile?.is_active ? <Eye className="h-5 w-5 text-foreground/70" /> : <EyeOff className="h-5 w-5 text-foreground/70" />}
+              title="Profil visible"
+              description={profile?.is_active ? "Les autres peuvent vous voir" : "Vous êtes masqué"}
+              trailing={
+                <Switch
+                  checked={profile?.is_active ?? true}
+                  onCheckedChange={handleToggleActive}
+                  disabled={updateProfile.isPending}
+                />
+              }
+            />
+          </div>
+        </section>
+
+        {/* Matching Preferences */}
+        <section className="pt-8">
           <h2 className="px-4 text-xs font-medium text-primary uppercase tracking-wider mb-2">
             Préférences de matching
           </h2>

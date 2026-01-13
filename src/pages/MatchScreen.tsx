@@ -23,8 +23,10 @@ const MatchScreen = () => {
   const avatarUrl = matchedProfile?.avatar_url || 
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${matchedProfile?.name || 'match'}`;
 
-  const currentUserAvatar = myProfile?.avatar_url ||
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${myProfile?.name || user?.id || 'currentuser'}`;
+  // Use full_name from Profile type but fall back to myProfile properties
+  const myProfileName = (myProfile as any)?.full_name || (myProfile as any)?.name;
+  const currentUserAvatar = 
+    `https://api.dicebear.com/7.x/avataaars/svg?seed=${myProfileName || user?.id || 'currentuser'}`;
 
   const handleStartChat = () => {
     if (match) {

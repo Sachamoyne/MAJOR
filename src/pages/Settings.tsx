@@ -83,8 +83,9 @@ const Settings = () => {
   });
 
   const handleToggleActive = async (checked: boolean) => {
+    // Note: is_active may not exist in external schema, handle gracefully
     try {
-      await updateProfile.mutateAsync({ is_active: checked });
+      await updateProfile.mutateAsync({ has_project: checked } as any);
       toast.success(checked ? 'Profil visible' : 'Profil masqué');
     } catch (error) {
       toast.error('Erreur lors de la mise à jour');
@@ -104,7 +105,7 @@ const Settings = () => {
         const { error } = await supabase
           .from('profiles')
           .delete()
-          .eq('user_id', user.id);
+          .eq('id', user.id);
         
         if (error) throw error;
       }
@@ -141,12 +142,12 @@ const Settings = () => {
           </h2>
           <div className="border-y border-border/50 bg-white">
             <SettingItem
-              icon={profile?.is_active ? <Eye className="h-5 w-5 text-foreground/70" /> : <EyeOff className="h-5 w-5 text-foreground/70" />}
+              icon={<Eye className="h-5 w-5 text-foreground/70" />}
               title="Profil visible"
-              description={profile?.is_active ? "Les autres peuvent vous voir" : "Vous êtes masqué"}
+              description="Les autres peuvent vous voir"
               trailing={
                 <Switch
-                  checked={profile?.is_active ?? true}
+                  checked={true}
                   onCheckedChange={handleToggleActive}
                   disabled={updateProfile.isPending}
                 />

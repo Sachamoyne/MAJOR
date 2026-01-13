@@ -16,7 +16,7 @@ const Home = () => {
   const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(null);
 
   // Check if onboarding is complete
-  const isOnboardingComplete = profile?.name && profile?.role;
+  const isOnboardingComplete = profile?.full_name && profile?.role_primary;
 
   // Redirect to onboarding if not complete
   if (!profileLoading && !isOnboardingComplete) {

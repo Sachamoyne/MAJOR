@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 const stepLabels = ['Infos', 'Rôle', 'Compétences', 'Recherche', 'Ambition'];
 
 type Role = 'technical' | 'product' | 'business' | 'generalist';
-type Availability = 'full-time' | 'part-time' | 'evenings-weekends';
 type Objective = 'find-cofounder' | 'join-project';
 
 const roles: { id: Role; label: string; description: string; icon: string }[] = [
@@ -21,27 +20,21 @@ const roles: { id: Role; label: string; description: string; icon: string }[] = 
   { id: 'generalist', label: 'Autre', description: 'Généraliste ou autre domaine', icon: '🔄' },
 ];
 
-const availabilities: { id: Availability; label: string; description: string }[] = [
-  { id: 'full-time', label: 'Temps plein', description: '35h+ par semaine' },
-  { id: 'part-time', label: 'Side project', description: '10-20h par semaine' },
-  { id: 'evenings-weekends', label: 'Soirs & weekends', description: 'Moins de 10h par semaine' },
-];
-
 const objectives: { id: Objective; label: string; description: string; icon: string }[] = [
   { id: 'find-cofounder', label: 'Trouver un co-fondateur', description: "J'ai une idée et je cherche quelqu'un", icon: '🎯' },
   { id: 'join-project', label: 'Rejoindre un projet', description: 'Je veux rejoindre une équipe existante', icon: '🤝' },
 ];
 
 interface OnboardingData {
-  name: string;
+  full_name: string;
   age: string;
   city: string;
-  school: string;
-  role: Role | null;
+  education: string;
+  role_primary: Role | null;
   ownedSkillIds: string[];
   wantedSkillIds: string[];
-  availability: Availability | null;
-  objective: Objective | null;
+  commitment_hours: number | null;
+  ambition_level: Objective | null;
 }
 
 export default function Onboarding() {
@@ -53,15 +46,15 @@ export default function Onboarding() {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [data, setData] = useState<OnboardingData>({
-    name: '',
+    full_name: '',
     age: '',
     city: '',
-    school: '',
-    role: null,
+    education: '',
+    role_primary: null,
     ownedSkillIds: [],
     wantedSkillIds: [],
-    availability: null,
-    objective: null,
+    commitment_hours: null,
+    ambition_level: null,
   });
 
   // Pre-fill with existing profile data
@@ -69,13 +62,13 @@ export default function Onboarding() {
     if (profile) {
       setData(prev => ({
         ...prev,
-        name: profile.name || '',
+        full_name: profile.full_name || '',
         age: profile.age?.toString() || '',
         city: profile.city || '',
-        school: profile.school || '',
-        role: profile.role as Role || null,
-        availability: profile.availability as Availability || null,
-        objective: profile.objective as Objective || null,
+        education: profile.education || '',
+        role_primary: profile.role_primary as Role || null,
+        commitment_hours: profile.commitment_hours || null,
+        ambition_level: profile.ambition_level as Objective || null,
       }));
     }
   }, [profile]);
@@ -87,15 +80,15 @@ export default function Onboarding() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return data.name && data.age && data.city && data.school;
+        return data.full_name && data.age && data.city && data.education;
       case 2:
-        return data.role;
+        return data.role_primary;
       case 3:
         return data.ownedSkillIds.length >= 1;
       case 4:
         return data.wantedSkillIds.length >= 1;
       case 5:
-        return data.availability && data.objective;
+        return data.commitment_hours && data.ambition_level;
       default:
         return false;
     }
@@ -108,14 +101,13 @@ export default function Onboarding() {
       // Save all data to database
       try {
         await updateProfile.mutateAsync({
-          name: data.name,
+          full_name: data.full_name,
           age: parseInt(data.age),
           city: data.city,
-          school: data.school,
-          role: data.role,
-          availability: data.availability,
-          objective: data.objective,
-          is_active: true,
+          education: data.education,
+          role_primary: data.role_primary,
+          commitment_hours: data.commitment_hours,
+          ambition_level: data.ambition_level,
         });
 
         await updateSkills.mutateAsync({
@@ -126,6 +118,7 @@ export default function Onboarding() {
         toast.success('Profil complété avec succès !');
         navigate('/home');
       } catch (error) {
+        console.error('Error saving profile:', error);
         toast.error('Erreur lors de la sauvegarde');
       }
     }
@@ -171,21 +164,21 @@ export default function Onboarding() {
         <div className="animate-fade-in">
           {currentStep === 1 && (
             <StepPersonalInfo
-              name={data.name}
+              fullName={data.full_name}
               age={data.age}
               city={data.city}
-              school={data.school}
-              onNameChange={(v) => updateData('name', v)}
+              education={data.education}
+              onFullNameChange={(v) => updateData('full_name', v)}
               onAgeChange={(v) => updateData('age', v)}
               onCityChange={(v) => updateData('city', v)}
-              onSchoolChange={(v) => updateData('school', v)}
+              onEducationChange={(v) => updateData('education', v)}
             />
           )}
           
           {currentStep === 2 && (
             <StepRole
-              role={data.role}
-              onRoleChange={(role) => updateData('role', role)}
+              role={data.role_primary}
+              onRoleChange={(role) => updateData('role_primary', role)}
             />
           )}
           
@@ -215,10 +208,10 @@ export default function Onboarding() {
           
           {currentStep === 5 && (
             <StepEngagement
-              availability={data.availability}
-              objective={data.objective}
-              onAvailabilityChange={(v) => updateData('availability', v)}
-              onObjectiveChange={(v) => updateData('objective', v)}
+              commitmentHours={data.commitment_hours}
+              ambitionLevel={data.ambition_level}
+              onCommitmentHoursChange={(v) => updateData('commitment_hours', v)}
+              onAmbitionLevelChange={(v) => updateData('ambition_level', v)}
             />
           )}
         </div>
@@ -249,15 +242,15 @@ export default function Onboarding() {
   );
 }
 
-function StepPersonalInfo({ name, age, city, school, onNameChange, onAgeChange, onCityChange, onSchoolChange }: {
-  name: string;
+function StepPersonalInfo({ fullName, age, city, education, onFullNameChange, onAgeChange, onCityChange, onEducationChange }: {
+  fullName: string;
   age: string;
   city: string;
-  school: string;
-  onNameChange: (v: string) => void;
+  education: string;
+  onFullNameChange: (v: string) => void;
   onAgeChange: (v: string) => void;
   onCityChange: (v: string) => void;
-  onSchoolChange: (v: string) => void;
+  onEducationChange: (v: string) => void;
 }) {
   return (
     <div className="space-y-6">
@@ -270,8 +263,8 @@ function StepPersonalInfo({ name, age, city, school, onNameChange, onAgeChange, 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Prénom</label>
           <Input 
-            value={name}
-            onChange={(e) => onNameChange(e.target.value)}
+            value={fullName}
+            onChange={(e) => onFullNameChange(e.target.value)}
             placeholder="Thomas"
           />
         </div>
@@ -300,8 +293,8 @@ function StepPersonalInfo({ name, age, city, school, onNameChange, onAgeChange, 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">École / Entreprise</label>
           <Input 
-            value={school}
-            onChange={(e) => onSchoolChange(e.target.value)}
+            value={education}
+            onChange={(e) => onEducationChange(e.target.value)}
             placeholder="HEC, 42, Google..."
           />
           <p className="text-xs text-muted-foreground">
@@ -429,12 +422,19 @@ function StepSkills({ title, description, selectedSkillIds, onSkillsChange, skil
   );
 }
 
-function StepEngagement({ availability, objective, onAvailabilityChange, onObjectiveChange }: {
-  availability: Availability | null;
-  objective: Objective | null;
-  onAvailabilityChange: (v: Availability) => void;
-  onObjectiveChange: (v: Objective) => void;
+function StepEngagement({ commitmentHours, ambitionLevel, onCommitmentHoursChange, onAmbitionLevelChange }: {
+  commitmentHours: number | null;
+  ambitionLevel: Objective | null;
+  onCommitmentHoursChange: (v: number) => void;
+  onAmbitionLevelChange: (v: Objective) => void;
 }) {
+  // Map availabilities to commitment hours
+  const commitmentOptions = [
+    { hours: 35, label: 'Temps plein', description: '35h+ par semaine' },
+    { hours: 15, label: 'Side project', description: '10-20h par semaine' },
+    { hours: 5, label: 'Soirs & weekends', description: 'Moins de 10h par semaine' },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -442,37 +442,37 @@ function StepEngagement({ availability, objective, onAvailabilityChange, onObjec
         <p className="text-muted-foreground">Ces informations aident à trouver quelqu'un avec le même niveau d'investissement.</p>
       </div>
       
-      {/* Availability */}
+      {/* Commitment Hours */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Clock className="w-5 h-5 text-muted-foreground" />
           <p className="font-medium text-foreground">Disponibilité</p>
         </div>
         <div className="grid gap-2">
-          {availabilities.map((a) => (
+          {commitmentOptions.map((option) => (
             <button
-              key={a.id}
-              onClick={() => onAvailabilityChange(a.id)}
+              key={option.hours}
+              onClick={() => onCommitmentHoursChange(option.hours)}
               className={cn(
                 "p-3 rounded-lg border text-left transition-all duration-200",
-                availability === a.id 
+                commitmentHours === option.hours 
                   ? "bg-primary text-primary-foreground border-primary" 
                   : "bg-card border-border hover:border-primary/50"
               )}
             >
-              <p className="font-medium">{a.label}</p>
+              <p className="font-medium">{option.label}</p>
               <p className={cn(
                 "text-sm",
-                availability === a.id ? "text-primary-foreground/80" : "text-muted-foreground"
+                commitmentHours === option.hours ? "text-primary-foreground/80" : "text-muted-foreground"
               )}>
-                {a.description}
+                {option.description}
               </p>
             </button>
           ))}
         </div>
       </div>
       
-      {/* Objective */}
+      {/* Objective / Ambition Level */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Rocket className="w-5 h-5 text-muted-foreground" />
@@ -482,10 +482,10 @@ function StepEngagement({ availability, objective, onAvailabilityChange, onObjec
           {objectives.map((o) => (
             <button
               key={o.id}
-              onClick={() => onObjectiveChange(o.id)}
+              onClick={() => onAmbitionLevelChange(o.id)}
               className={cn(
                 "p-3 rounded-lg border text-left transition-all duration-200",
-                objective === o.id 
+                ambitionLevel === o.id 
                   ? "bg-primary text-primary-foreground border-primary" 
                   : "bg-card border-border hover:border-primary/50"
               )}
@@ -496,7 +496,7 @@ function StepEngagement({ availability, objective, onAvailabilityChange, onObjec
                   <p className="font-medium">{o.label}</p>
                   <p className={cn(
                     "text-sm",
-                    objective === o.id ? "text-primary-foreground/80" : "text-muted-foreground"
+                    ambitionLevel === o.id ? "text-primary-foreground/80" : "text-muted-foreground"
                   )}>
                     {o.description}
                   </p>

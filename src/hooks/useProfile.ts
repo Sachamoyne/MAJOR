@@ -2,21 +2,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Schema matching external Supabase: profiles.id = auth.uid()
 export interface Profile {
   id: string;
-  user_id: string;
-  name: string | null;
+  full_name: string | null;
   age: number | null;
   city: string | null;
-  school: string | null;
-  role: string | null;
-  bio: string | null;
-  availability: string | null;
-  objective: string | null;
-  is_active: boolean;
-  avatar_url: string | null;
-  created_at: string;
-  updated_at: string;
+  education: string | null;
+  role_primary: string | null;
+  target_role: string | null;
+  has_project: boolean | null;
+  ambition_level: string | null;
+  commitment_hours: number | null;
 }
 
 export interface Skill {
@@ -40,14 +37,16 @@ export function useProfile() {
     queryFn: async () => {
       if (!user) return null;
       
+      // profiles.id = auth.uid() in external database
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .maybeSingle();
       
       if (error) throw error;
-      return data as Profile | null;
+      // Cast to any to handle external schema differences
+      return data as unknown as Profile | null;
     },
     enabled: !!user,
   });
@@ -93,13 +92,14 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
+    mutationFn: async (updates: Partial<Omit<Profile, 'id'>>) => {
       if (!user) throw new Error('Not authenticated');
       
+      // Use .update() with filter by id (which equals auth.uid())
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('user_id', user.id)
+        .update(updates as any)
+        .eq('id', user.id)
         .select()
         .single();
       

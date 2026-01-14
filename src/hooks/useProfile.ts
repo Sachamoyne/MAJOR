@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Database } from "@/integrations/supabase/types";
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 export interface Profile extends ProfileRow {}
 
@@ -27,7 +28,11 @@ export function useProfile() {
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
       if (error) throw error;
       return data as Profile | null;
@@ -41,10 +46,15 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
+    mutationFn: async (updates: ProfileUpdate) => {
       if (!user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase.from("profiles").update(updates).eq("id", user.id).select().single();
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("user_id", user.id)
+        .select()
+        .single();
 
       if (error) throw error;
       return data;
@@ -59,7 +69,10 @@ export function useAllSkills() {
   return useQuery({
     queryKey: ["all-skills"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("skills").select("*").order("category", { ascending: true });
+      const { data, error } = await supabase
+        .from("skills")
+        .select("*")
+        .order("category", { ascending: true });
 
       if (error) throw error;
       return data as Skill[];
@@ -75,12 +88,26 @@ export function useUpdateUserSkills() {
     mutationFn: async ({ ownedSkillIds, wantedSkillIds }: { ownedSkillIds: string[]; wantedSkillIds: string[] }) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Suppression par id (qui est l'uuid utilisateur dans ta table)
-      await supabase.from("user_skills").delete().eq("user_id", user.id);
+      // Delete existing skills
+      const { error: deleteError } = await supabase
+        .from("user_skills")
+        .delete()
+        .eq("user_id", user.id);
 
-      const newSkills = [
-        ...ownedSkillIds.map((id) => ({ user_id: user.id, skill_id: id, type: "owned" })),
-        ...wantedSkillIds.map((id) => ({ user_id: user.id, skill_id: id, type: "wanted" })),
+      if (deleteError) throw deleteError;
+
+      // Prepare new skills
+      const newSkills: Database["public"]["Tables"]["user_skills"]["Insert"][] = [
+        ...ownedSkillIds.map((skillId) => ({ 
+          user_id: user.id, 
+          skill_id: skillId, 
+          type: "owned" as const 
+        })),
+        ...wantedSkillIds.map((skillId) => ({ 
+          user_id: user.id, 
+          skill_id: skillId, 
+          type: "wanted" as const 
+        })),
       ];
 
       if (newSkills.length > 0) {

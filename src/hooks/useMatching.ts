@@ -1,19 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Database } from '@/integrations/supabase/types';
 
-export interface MatchProfile {
-  id: string;
-  user_id: string;
-  name: string | null;
-  age: number | null;
-  city: string | null;
-  school: string | null;
-  role: string | null;
-  bio: string | null;
-  availability: string | null;
-  objective: string | null;
-  avatar_url: string | null;
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+export interface MatchProfile extends ProfileRow {
   owned_skills: string[];
   wanted_skills: string[];
   compatibility_score: number;
@@ -30,10 +22,11 @@ export interface Match {
 
 // Get complementary role
 function getComplementaryRoles(role: string | null): string[] {
-  if (role === 'technical') return ['business', 'product'];
-  if (role === 'business') return ['technical', 'product'];
-  if (role === 'product') return ['technical', 'business'];
-  return ['technical', 'business', 'product', 'generalist'];
+  if (role === 'Tech') return ['Business', 'Design', 'Product'];
+  if (role === 'Business') return ['Tech', 'Design', 'Product'];
+  if (role === 'Design') return ['Tech', 'Business', 'Product'];
+  if (role === 'Product') return ['Tech', 'Business', 'Design'];
+  return ['Tech', 'Business', 'Design', 'Product', 'Other'];
 }
 
 export function useMatchingProfiles() {
@@ -49,7 +42,7 @@ export function useMatchingProfiles() {
         .from('profiles')
         .select('role')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       const { data: myWantedSkills } = await supabase
         .from('user_skills')
@@ -58,7 +51,7 @@ export function useMatchingProfiles() {
         .eq('type', 'wanted');
 
       const myWantedSkillIds = (myWantedSkills || []).map(s => s.skill_id);
-      const complementaryRoles = getComplementaryRoles(myProfile?.role);
+      const complementaryRoles = getComplementaryRoles(myProfile?.role ?? null);
 
       // Get profiles I've already liked or passed
       const { data: existingLikes } = await supabase
@@ -137,7 +130,7 @@ export function useLikeProfile() {
         .insert({
           liker_id: user.id,
           liked_id: likedUserId,
-        });
+        } as Database["public"]["Tables"]["likes"]["Insert"]);
 
       if (likeError) throw likeError;
 
@@ -157,11 +150,12 @@ export function useLikeProfile() {
             user_1: user.id,
             user_2: likedUserId,
             status: 'active',
-          })
+          } as Database["public"]["Tables"]["matches"]["Insert"])
           .select()
           .single();
 
         if (matchError) throw matchError;
+        if (!match) throw new Error('Match creation failed');
 
         // Create initial message
         await supabase
@@ -170,7 +164,7 @@ export function useLikeProfile() {
             match_id: match.id,
             sender_id: user.id,
             content: "C'est un match ! 🎉 Commencez à discuter.",
-          });
+          } as Database["public"]["Tables"]["messages"]["Insert"]);
 
         return { isMatch: true, matchId: match.id };
       }
@@ -210,7 +204,7 @@ export function useMatches() {
             .from('profiles')
             .select('*')
             .eq('user_id', otherUserId)
-            .single();
+            .maybeSingle();
 
           return {
             ...match,

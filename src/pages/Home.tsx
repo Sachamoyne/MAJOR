@@ -16,7 +16,7 @@ const Home = () => {
   const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(null);
 
   // Check if onboarding is complete
-  const isOnboardingComplete = profile?.full_name && profile?.role_primary;
+  const isOnboardingComplete = profile?.name && profile?.role;
 
   // Redirect to onboarding if not complete
   if (!profileLoading && !isOnboardingComplete) {
@@ -253,10 +253,11 @@ function ProfileCard({ profile, onTap }: { profile: MatchProfile; onTap: () => v
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.name || profile.user_id}`;
 
   const roleLabels: Record<string, string> = {
-    technical: 'Tech',
-    business: 'Business',
-    product: 'Produit',
-    generalist: 'Généraliste',
+    Tech: 'Tech',
+    Business: 'Business',
+    Design: 'Design',
+    Product: 'Produit',
+    Other: 'Autre',
   };
 
   return (

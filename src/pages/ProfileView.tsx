@@ -17,9 +17,10 @@ const ProfileView = () => {
         .from('profiles')
         .select('*')
         .eq('user_id', id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!profileData) return null;
 
       // Get skills
       const { data: skillsData } = await supabase
@@ -33,10 +34,20 @@ const ProfileView = () => {
         `)
         .eq('user_id', id);
 
+      const ownedSkills = (skillsData || [])
+        .filter((s: { type: string }) => s.type === 'owned')
+        .map((s: { skills: { id: string; name: string } | null }) => s.skills)
+        .filter(Boolean);
+
+      const wantedSkills = (skillsData || [])
+        .filter((s: { type: string }) => s.type === 'wanted')
+        .map((s: { skills: { id: string; name: string } | null }) => s.skills)
+        .filter(Boolean);
+
       return {
         ...profileData,
-        owned_skills: (skillsData || []).filter((s: any) => s.type === 'owned').map((s: any) => s.skills),
-        wanted_skills: (skillsData || []).filter((s: any) => s.type === 'wanted').map((s: any) => s.skills),
+        owned_skills: ownedSkills,
+        wanted_skills: wantedSkills,
       };
     },
     enabled: !!id,
@@ -72,10 +83,11 @@ const ProfileView = () => {
   };
 
   const roleLabels: Record<string, string> = {
-    technical: 'Tech',
-    business: 'Business',
-    product: 'Produit',
-    generalist: 'Généraliste',
+    Tech: 'Tech',
+    Business: 'Business',
+    Design: 'Design',
+    Product: 'Produit',
+    Other: 'Autre',
   };
 
   return (
@@ -146,7 +158,7 @@ const ProfileView = () => {
               Compétences
             </h2>
             <div className="flex flex-wrap gap-2">
-              {profile.owned_skills.map((skill: any) => (
+              {profile.owned_skills.map((skill: { id: string; name: string }) => (
                 <span
                   key={skill.id}
                   className="px-3 py-1.5 text-sm text-foreground bg-secondary rounded-full"
@@ -165,7 +177,7 @@ const ProfileView = () => {
               Recherche
             </h2>
             <div className="flex flex-wrap gap-2">
-              {profile.wanted_skills.map((skill: any) => (
+              {profile.wanted_skills.map((skill: { id: string; name: string }) => (
                 <span
                   key={skill.id}
                   className="px-3 py-1.5 text-sm text-foreground border border-primary/20 rounded-full"

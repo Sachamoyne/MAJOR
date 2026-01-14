@@ -105,6 +105,7 @@ export type Database = {
           linkedin_url: string | null
           name: string | null
           objective: string | null
+          onboarding_completed: boolean | null
           role: string | null
           school: string | null
           twitter_url: string | null
@@ -124,6 +125,7 @@ export type Database = {
           linkedin_url?: string | null
           name?: string | null
           objective?: string | null
+          onboarding_completed?: boolean | null
           role?: string | null
           school?: string | null
           twitter_url?: string | null
@@ -143,6 +145,7 @@ export type Database = {
           linkedin_url?: string | null
           name?: string | null
           objective?: string | null
+          onboarding_completed?: boolean | null
           role?: string | null
           school?: string | null
           twitter_url?: string | null

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 const stepLabels = ["Infos", "Rôle", "Compétences", "Recherche", "Ambition"];
 
+// Alignement sur les Enums SQL de ta base
 type Role = "Tech" | "Business" | "Design" | "Marketing" | "Product" | "Operations" | "Other";
 type Objective = "find-cofounder" | "join-project";
 
@@ -63,8 +64,8 @@ export default function Onboarding() {
     role_primary: null,
     ownedSkillIds: [],
     wantedSkillIds: [],
-    commitment_hours: null,
-    ambition_level: null,
+    commitment_hours: "35h+",
+    ambition_level: "join-project",
   });
 
   useEffect(() => {
@@ -76,8 +77,8 @@ export default function Onboarding() {
         city: profile.city || "",
         education: profile.education || "",
         role_primary: (profile.role_primary as Role) || null,
-        commitment_hours: profile.commitment_hours || null,
-        ambition_level: profile.ambition_level || null,
+        commitment_hours: profile.commitment_hours || "35h+",
+        ambition_level: profile.ambition_level || "join-project",
       }));
     }
   }, [profile]);
@@ -108,19 +109,22 @@ export default function Onboarding() {
       setCurrentStep(currentStep + 1);
     } else {
       try {
-        // SAUVEGARDE DU PROFIL (Uniquement les colonnes de la table profiles)
-        await updateProfile.mutateAsync({
-          full_name: data.full_name,
-          age: data.age ? parseInt(data.age) : null,
-          city: data.city,
-          education: data.education,
+        // NETTOYAGE ET FORMATAGE DES DONNÉES AVANT ENVOI
+        const profileUpdates = {
+          full_name: data.full_name.trim(),
+          age: data.age ? parseInt(data.age, 10) : null, // Conversion explicite en int4 pour Supabase
+          city: data.city.trim(),
+          education: data.education.trim(),
           role_primary: data.role_primary,
-          commitment_hours: data.commitment_hours,
-          ambition_level: data.ambition_level,
+          commitment_hours: String(data.commitment_hours), // Forçage en format text
+          ambition_level: String(data.ambition_level), // Forçage en format text
           onboarding_completed: true,
-        });
+        };
 
-        // SAUVEGARDE DES SKILLS (Table user_skills)
+        // 1. Sauvegarde du profil
+        await updateProfile.mutateAsync(profileUpdates);
+
+        // 2. Sauvegarde des compétences (Table séparée)
         await updateSkills.mutateAsync({
           ownedSkillIds: data.ownedSkillIds,
           wantedSkillIds: data.wantedSkillIds,
@@ -130,7 +134,7 @@ export default function Onboarding() {
         navigate("/home");
       } catch (error) {
         console.error("Error saving profile:", error);
-        toast.error("Erreur lors de la sauvegarde : vérifiez la connexion Supabase");
+        toast.error("Erreur lors de la sauvegarde : vérifiez les types de données.");
       }
     }
   };
@@ -247,7 +251,7 @@ function StepPersonalInfo({
 }: any) {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Informations personnelles</h2>
+      <h2 className="text-2xl font-bold text-foreground">Informations personnelles</h2>
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium">Prénom</label>
@@ -273,15 +277,17 @@ function StepPersonalInfo({
 function StepRole({ role, onRoleChange }: any) {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Votre rôle idéal</h2>
+      <h2 className="text-2xl font-bold text-foreground">Votre rôle idéal</h2>
       <div className="grid gap-3">
         {roles.map((r) => (
           <button
             key={r.id}
             onClick={() => onRoleChange(r.id)}
             className={cn(
-              "p-4 rounded-xl border text-left",
-              role === r.id ? "bg-primary text-primary-foreground" : "bg-card",
+              "p-4 rounded-xl border text-left transition-all",
+              role === r.id
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card border-border hover:bg-accent",
             )}
           >
             <span className="text-2xl mr-2">{r.icon}</span> {r.label}
@@ -307,8 +313,8 @@ function StepSkills({
   };
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">{title}</h2>
-      <div className="space-y-4">
+      <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
         {Object.entries(skillsByCategory).map(([cat, skills]: any) => (
           <div key={cat}>
             <p className="text-sm text-muted-foreground mb-2">{cat}</p>
@@ -318,6 +324,7 @@ function StepSkills({
                   key={s.id}
                   variant={selectedSkillIds.includes(s.id) ? "default" : "secondary"}
                   onClick={() => toggleSkill(s.id)}
+                  className="rounded-full"
                 >
                   {s.name}
                 </Button>
@@ -343,13 +350,14 @@ function StepEngagement({ commitmentHours, ambitionLevel, onCommitmentHoursChang
   return (
     <div className="space-y-8">
       <div className="space-y-3">
-        <p className="font-medium">Disponibilité</p>
+        <p className="font-medium text-foreground">Disponibilité</p>
         <div className="grid gap-2">
           {options.map((o) => (
             <Button
               key={o.v}
               variant={commitmentHours === o.v ? "default" : "outline"}
               onClick={() => onCommitmentHoursChange(o.v)}
+              className="justify-start h-auto py-3 px-4"
             >
               {o.l}
             </Button>
@@ -357,13 +365,14 @@ function StepEngagement({ commitmentHours, ambitionLevel, onCommitmentHoursChang
         </div>
       </div>
       <div className="space-y-3">
-        <p className="font-medium">Objectif</p>
+        <p className="font-medium text-foreground">Objectif</p>
         <div className="grid gap-2">
           {objectives.map((o) => (
             <Button
               key={o.v}
               variant={ambitionLevel === o.v ? "default" : "outline"}
               onClick={() => onAmbitionLevelChange(o.v)}
+              className="justify-start h-auto py-3 px-4"
             >
               {o.l}
             </Button>

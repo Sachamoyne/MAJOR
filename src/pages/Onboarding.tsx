@@ -8,8 +8,8 @@ import { PremiumCard, SkillChip } from "@/components/PremiumCard";
 import { ArrowRight, ArrowLeft, Linkedin, Github } from "lucide-react";
 import { useUpdateProfile, useAllSkills, useUpdateUserSkills, useProfile } from "@/hooks/useProfile";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const stepLabels = ["Profil", "Rôle", "Compétences", "Recherche", "Disponibilité", "Réseaux"];
 
@@ -39,7 +39,6 @@ const objectives = [
 export default function Onboarding() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: allSkills } = useAllSkills();
   const updateProfile = useUpdateProfile();
@@ -106,40 +105,65 @@ export default function Onboarding() {
     }
   };
 
+  const handleSubmit = async () => {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      console.error("Supabase Error:", authError);
+      throw authError;
+    }
+
+    if (!authData?.user) {
+      throw new Error("Not authenticated");
+    }
+
+    const payload = {
+      user_id: authData.user.id,
+      name: data.name.trim() || null,
+      age: data.age ? parseInt(data.age, 10) : null,
+      city: data.city.trim() || null,
+      school: data.school.trim() || null,
+      avatar_url: data.avatar_url || null,
+      role: data.role,
+      bio: null,
+      availability: data.availability || null,
+      objective: data.objective || null,
+      linkedin_url: data.linkedin_url.trim() || null,
+      github_url: data.github_url.trim() || null,
+      twitter_url: data.twitter_url.trim() || null,
+      onboarding_completed: true,
+    };
+
+    console.log("Payload:", payload);
+    const { error } = await supabase.from("profiles").upsert(payload, { onConflict: "user_id" });
+    if (error) {
+      console.error("Supabase Error:", error);
+      throw error;
+    }
+
+    await updateSkills.mutateAsync({
+      ownedSkillIds: data.ownedSkillIds,
+      wantedSkillIds: data.wantedSkillIds,
+    });
+
+    await queryClient.invalidateQueries({ queryKey: ["profile", authData.user.id] });
+  };
+
   const handleNext = async () => {
     if (currentStep < 6) {
       await saveStepProgress();
       setCurrentStep(currentStep + 1);
-    } else {
-      try {
-        toast.loading("Finalisation de votre profil...");
+      return;
+    }
 
-        // 1. Sauvegarde finale des données textuelles
-        await saveStepProgress();
+    const toastId = toast.loading("Finalisation de votre profil...");
 
-        // 2. Sauvegarde des compétences
-        await updateSkills.mutateAsync({
-          ownedSkillIds: data.ownedSkillIds,
-          wantedSkillIds: data.wantedSkillIds,
-        });
-
-        // 3. IMPORTANT : Marquer l'onboarding comme terminé
-        await updateProfile.mutateAsync({
-          onboarding_completed: true,
-        } as any);
-
-        // 4. Invalidation du cache pour être sûr
-        await queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
-
-        toast.success("Profil complété avec succès !");
-
-        // 5. HARD REDIRECT : On force le navigateur à recharger sur /home
-        // Cela garantit que le ProtectedRoute lise la version fraîche de la BDD
-        window.location.href = "/home";
-      } catch (error) {
-        console.error("Error during onboarding finalization:", error);
-        toast.error("Erreur lors de la finalisation.");
-      }
+    try {
+      await handleSubmit();
+      toast.success("Profil complété avec succès !", { id: toastId });
+      navigate("/matching");
+    } catch (error) {
+      console.error("Error during onboarding finalization:", error);
+      toast.error("Erreur lors de la finalisation.", { id: toastId });
     }
   };
 

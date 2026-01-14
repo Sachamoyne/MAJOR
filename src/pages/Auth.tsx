@@ -61,6 +61,7 @@ export default function Auth() {
       } else {
         const { error } = await signUp(email, password);
         if (error) {
+          console.error("Sign-up error:", error);
           if (error.message.includes('User already registered')) {
             toast.error('Un compte existe déjà avec cet email');
           } else {
@@ -72,6 +73,7 @@ export default function Auth() {
         }
       }
     } catch (err) {
+      console.error("Auth submit error:", err);
       toast.error('Une erreur est survenue');
     } finally {
       setLoading(false);

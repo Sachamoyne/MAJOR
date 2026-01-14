@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import ProfileView from "./pages/ProfileView";
 import MatchScreen from "./pages/MatchScreen";
+import Matching from "./pages/Matching";
 import Messages from "./pages/Messages";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -33,53 +34,84 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             
             {/* Onboarding (multi-step) - Protected */}
-            <Route path="/onboarding" element={
-              <ProtectedRoute requireOnboarding={false}>
-                <Onboarding />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute requireOnboarding={false}>
+                  <Onboarding />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Home - Swipe (Core feature) - Protected */}
-            <Route path="/home" element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Profile detail (before match) - Protected */}
-            <Route path="/profile/:id" element={
-              <ProtectedRoute>
-                <ProfileView />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/profile/:id"
+              element={
+                <ProtectedRoute>
+                  <ProfileView />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Match screen - Protected */}
-            <Route path="/match" element={
-              <ProtectedRoute>
-                <MatchScreen />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/match"
+              element={
+                <ProtectedRoute>
+                  <MatchScreen />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Matching - Protected */}
+            <Route
+              path="/matching"
+              element={
+                <ProtectedRoute>
+                  <Matching />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Messaging - Protected */}
-            <Route path="/messages" element={
-              <ProtectedRoute>
-                <Messages />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
             
             {/* My profile (DO NOT CHANGE) - Protected */}
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
             
             {/* Settings - Protected */}
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            } />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
             
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

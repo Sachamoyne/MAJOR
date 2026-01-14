@@ -5,7 +5,7 @@ MAJOR n'est pas un simple outil de "swipe". C'est le moteur technologique d'une 
 **L'application est un moyen, pas une fin.** La valeur de MAJOR réside exclusivement dans la qualité, l'ambition et la complémentarité de ses membres. Notre mission est de réduire la friction humaine pour permettre l'émergence des prochaines licornes françaises.
 
 ## 🛠 Tech Stack (MVP First)
-- **Frontend & Logique :** Lovable / React (Vite)
+- **Frontend & Logique :** MAJOR / React (Vite)
 - **Design :** Figma
 - **Base de données & Auth :** Supabase
 - **Workflow / Backend :** Low-code (Rork/n8n si nécessaire)
@@ -22,6 +22,6 @@ MAJOR n'est pas un simple outil de "swipe". C'est le moteur technologique d'une 
 - **Product-Led Growth :** L'outil doit être si fluide qu'il s'efface au profit de la rencontre humaine.
 
 ## 📋 Roadmap Courte Terme
-- Finalisation des flux d'onboarding sur Lovable.
+- Finalisation des flux d'onboarding sur MAJOR.
 - Setup des tables de matching dans Supabase.
 - Phase de Beta fermée sur un échantillon de profils "Builders"

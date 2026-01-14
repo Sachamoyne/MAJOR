@@ -1,6 +1,6 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,8 +12,7 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
   const { data: profile, isLoading: profileLoading } = useProfile();
   const location = useLocation();
 
-  // Show loading while checking auth
-  if (authLoading) {
+  if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -21,30 +20,20 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
     );
   }
 
-  // Redirect to auth if not logged in
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Show loading while fetching profile
-  if (profileLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  // Utilisation stricte du flag onboarding_completed
+  const isOnboardingComplete = !!profile?.onboarding_completed;
 
-  // Check if onboarding is complete using the onboarding_completed flag
-  const isOnboardingComplete = (profile as any)?.onboarding_completed === true;
-
-  // If user has completed onboarding and tries to access /onboarding, redirect to /home
-  if (isOnboardingComplete && location.pathname === '/onboarding') {
+  // Si déjà fini et tente d'aller sur /onboarding -> Home
+  if (isOnboardingComplete && location.pathname === "/onboarding") {
     return <Navigate to="/home" replace />;
   }
 
-  // If on a protected page that requires onboarding and onboarding is not complete, redirect to onboarding
-  if (requireOnboarding && !isOnboardingComplete && location.pathname !== '/onboarding') {
+  // Si pas fini et tente d'aller ailleurs -> Onboarding
+  if (requireOnboarding && !isOnboardingComplete && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
   }
 

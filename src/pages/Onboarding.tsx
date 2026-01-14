@@ -81,7 +81,7 @@ export default function Onboarding() {
     }
   }, [profile]);
 
-  const updateData = <K extends keyof typeof data>(key: K, value: typeof data[K]) => {
+  const updateData = <K extends keyof typeof data>(key: K, value: (typeof data)[K]) => {
     setData((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -112,29 +112,33 @@ export default function Onboarding() {
       setCurrentStep(currentStep + 1);
     } else {
       try {
-        // a) Final save of profile data
+        toast.loading("Finalisation de votre profil...");
+
+        // 1. Sauvegarde finale des données textuelles
         await saveStepProgress();
 
-        // b) Save skills
+        // 2. Sauvegarde des compétences
         await updateSkills.mutateAsync({
           ownedSkillIds: data.ownedSkillIds,
           wantedSkillIds: data.wantedSkillIds,
         });
 
-        // c) Mark onboarding as completed
-        await updateProfile.mutateAsync({ onboarding_completed: true } as any);
+        // 3. IMPORTANT : Marquer l'onboarding comme terminé
+        await updateProfile.mutateAsync({
+          onboarding_completed: true,
+        } as any);
 
-        // d) Invalidate profile cache
-        await queryClient.invalidateQueries({ queryKey: ["profile"] });
+        // 4. Invalidation du cache pour être sûr
+        await queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
 
-        // e) Show success message
-        toast.success("Profil complété !");
+        toast.success("Profil complété avec succès !");
 
-        // f) Force full page reload to purge cache and re-read from DB
-        window.location.assign("/home");
+        // 5. HARD REDIRECT : On force le navigateur à recharger sur /home
+        // Cela garantit que le ProtectedRoute lise la version fraîche de la BDD
+        window.location.href = "/home";
       } catch (error) {
-        console.error("Error:", error);
-        toast.error("Erreur de sauvegarde.");
+        console.error("Error during onboarding finalization:", error);
+        toast.error("Erreur lors de la finalisation.");
       }
     }
   };
@@ -158,12 +162,15 @@ export default function Onboarding() {
   };
 
   // Group skills by category
-  const skillsByCategory = allSkills?.reduce((acc, skill) => {
-    const category = skill.category || "Autres";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(skill);
-    return acc;
-  }, {} as Record<string, typeof allSkills>);
+  const skillsByCategory = allSkills?.reduce(
+    (acc, skill) => {
+      const category = skill.category || "Autres";
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(skill);
+      return acc;
+    },
+    {} as Record<string, typeof allSkills>,
+  );
 
   return (
     <div className="min-h-screen bg-gradient-hero flex flex-col">
@@ -184,10 +191,7 @@ export default function Onboarding() {
               <p className="text-muted-foreground mt-2">Présentez-vous aux autres fondateurs</p>
             </div>
 
-            <AvatarUpload
-              currentUrl={data.avatar_url}
-              onUpload={(url) => updateData("avatar_url", url)}
-            />
+            <AvatarUpload currentUrl={data.avatar_url} onUpload={(url) => updateData("avatar_url", url)} />
 
             <div className="space-y-4">
               <div>
@@ -266,30 +270,32 @@ export default function Onboarding() {
               </p>
             </div>
 
-            {skillsByCategory && Object.entries(skillsByCategory).map(([category, skills]) => (
-              <div key={category} className="space-y-3">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {category}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {skills?.map((skill) => (
-                    <SkillChip
-                      key={skill.id}
-                      selected={data.ownedSkillIds.includes(skill.id)}
-                      disabled={data.ownedSkillIds.length >= 5}
-                      onClick={() => {
-                        if (data.ownedSkillIds.includes(skill.id)) {
-                          updateData("ownedSkillIds", data.ownedSkillIds.filter((id) => id !== skill.id));
-                        } else if (data.ownedSkillIds.length < 5) {
-                          updateData("ownedSkillIds", [...data.ownedSkillIds, skill.id]);
-                        }
-                      }}
-                      label={skill.name}
-                    />
-                  ))}
+            {skillsByCategory &&
+              Object.entries(skillsByCategory).map(([category, skills]) => (
+                <div key={category} className="space-y-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{category}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {skills?.map((skill) => (
+                      <SkillChip
+                        key={skill.id}
+                        selected={data.ownedSkillIds.includes(skill.id)}
+                        disabled={data.ownedSkillIds.length >= 5}
+                        onClick={() => {
+                          if (data.ownedSkillIds.includes(skill.id)) {
+                            updateData(
+                              "ownedSkillIds",
+                              data.ownedSkillIds.filter((id) => id !== skill.id),
+                            );
+                          } else if (data.ownedSkillIds.length < 5) {
+                            updateData("ownedSkillIds", [...data.ownedSkillIds, skill.id]);
+                          }
+                        }}
+                        label={skill.name}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
 
@@ -303,30 +309,32 @@ export default function Onboarding() {
               </p>
             </div>
 
-            {skillsByCategory && Object.entries(skillsByCategory).map(([category, skills]) => (
-              <div key={category} className="space-y-3">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {category}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {skills?.map((skill) => (
-                    <SkillChip
-                      key={skill.id}
-                      selected={data.wantedSkillIds.includes(skill.id)}
-                      disabled={data.wantedSkillIds.length >= 5}
-                      onClick={() => {
-                        if (data.wantedSkillIds.includes(skill.id)) {
-                          updateData("wantedSkillIds", data.wantedSkillIds.filter((id) => id !== skill.id));
-                        } else if (data.wantedSkillIds.length < 5) {
-                          updateData("wantedSkillIds", [...data.wantedSkillIds, skill.id]);
-                        }
-                      }}
-                      label={skill.name}
-                    />
-                  ))}
+            {skillsByCategory &&
+              Object.entries(skillsByCategory).map(([category, skills]) => (
+                <div key={category} className="space-y-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{category}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {skills?.map((skill) => (
+                      <SkillChip
+                        key={skill.id}
+                        selected={data.wantedSkillIds.includes(skill.id)}
+                        disabled={data.wantedSkillIds.length >= 5}
+                        onClick={() => {
+                          if (data.wantedSkillIds.includes(skill.id)) {
+                            updateData(
+                              "wantedSkillIds",
+                              data.wantedSkillIds.filter((id) => id !== skill.id),
+                            );
+                          } else if (data.wantedSkillIds.length < 5) {
+                            updateData("wantedSkillIds", [...data.wantedSkillIds, skill.id]);
+                          }
+                        }}
+                        label={skill.name}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
 
@@ -377,9 +385,7 @@ export default function Onboarding() {
           <div className="space-y-8 animate-fade-in">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-foreground">Vos réseaux</h2>
-              <p className="text-muted-foreground mt-2">
-                Ajoutez vos liens sociaux (optionnel)
-              </p>
+              <p className="text-muted-foreground mt-2">Ajoutez vos liens sociaux (optionnel)</p>
             </div>
 
             <div className="space-y-4">
@@ -412,7 +418,11 @@ export default function Onboarding() {
               <div className="relative">
                 <label className="text-sm font-medium text-foreground mb-1.5 block">X (Twitter)</label>
                 <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor">
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                   </svg>
                   <Input
@@ -435,11 +445,7 @@ export default function Onboarding() {
       {/* Footer */}
       <footer className="sticky bottom-0 bg-background/80 backdrop-blur-sm border-t border-border/50 p-4">
         <div className="container max-w-xl mx-auto flex justify-between gap-4">
-          <Button
-            variant="ghost"
-            onClick={handleBack}
-            className="flex-1 h-12"
-          >
+          <Button variant="ghost" onClick={handleBack} className="flex-1 h-12">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Retour
           </Button>

@@ -5,9 +5,15 @@ import { Database } from '@/integrations/supabase/types';
 
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
+export interface SkillInfo {
+  id: string;
+  name: string;
+  category: string | null;
+}
+
 export interface MatchProfile extends ProfileRow {
-  owned_skills: string[];
-  wanted_skills: string[];
+  owned_skills: SkillInfo[];
+  wanted_skills: SkillInfo[];
   compatibility_score: number;
 }
 
@@ -76,26 +82,42 @@ export function useMatchingProfiles() {
         p => !likedUserIds.includes(p.user_id)
       );
 
-      // Get skills for each profile
+      // Get skills for each profile with skill details
       const profilesWithSkills: MatchProfile[] = await Promise.all(
         filteredProfiles.map(async (profile) => {
-          const { data: skills } = await supabase
+          const { data: userSkills } = await supabase
             .from('user_skills')
-            .select('skill_id, type')
+            .select(`
+              type,
+              skill:skills(id, name, category)
+            `)
             .eq('user_id', profile.user_id);
 
-          const ownedSkills = (skills || [])
-            .filter(s => s.type === 'owned')
-            .map(s => s.skill_id);
-          
-          const wantedSkills = (skills || [])
-            .filter(s => s.type === 'wanted')
-            .map(s => s.skill_id);
+          const ownedSkills: SkillInfo[] = [];
+          const wantedSkills: SkillInfo[] = [];
+          const ownedSkillIds: string[] = [];
+
+          (userSkills || []).forEach((item) => {
+            if (item.skill) {
+              const skillInfo: SkillInfo = {
+                id: (item.skill as any).id,
+                name: (item.skill as any).name,
+                category: (item.skill as any).category,
+              };
+              
+              if (item.type === 'owned') {
+                ownedSkills.push(skillInfo);
+                ownedSkillIds.push(skillInfo.id);
+              } else {
+                wantedSkills.push(skillInfo);
+              }
+            }
+          });
 
           // Calculate compatibility score
           let score = 0;
           myWantedSkillIds.forEach(wantedId => {
-            if (ownedSkills.includes(wantedId)) {
+            if (ownedSkillIds.includes(wantedId)) {
               score += 1;
             }
           });

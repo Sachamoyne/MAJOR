@@ -98,23 +98,28 @@ const Settings = () => {
   };
 
   const handleDeleteAccount = async () => {
+    if (!user) {
+      toast.error("Utilisateur non connecté");
+      return;
+    }
+    
     try {
-      // Delete profile first (cascade will handle related data)
-      if (user) {
-        const { error } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('user_id', user.id);
-        
-        if (error) throw error;
-      }
+      // Delete profile - the trigger will cascade to delete auth.users
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', user.id);
       
-      // Sign out
+      if (error) throw error;
+      
+      // Sign out immediately after deletion
       await signOut();
-      toast.success("Compte supprimé");
-      navigate("/");
-    } catch (error) {
-      toast.error("Erreur lors de la suppression");
+      
+      toast.success("Compte supprimé avec succès");
+      navigate("/auth");
+    } catch (error: any) {
+      console.error("Delete account error:", error);
+      toast.error(error.message || "Erreur lors de la suppression du compte");
     }
   };
 

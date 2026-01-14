@@ -112,25 +112,26 @@ export default function Onboarding() {
       setCurrentStep(currentStep + 1);
     } else {
       try {
-        // Final save
+        // a) Final save of profile data
         await saveStepProgress();
 
-        // Save skills
+        // b) Save skills
         await updateSkills.mutateAsync({
           ownedSkillIds: data.ownedSkillIds,
           wantedSkillIds: data.wantedSkillIds,
         });
 
-        // Invalidate and wait for profile cache to update
-        await queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
-        
-        // Wait a brief moment for the cache to settle
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // c) Mark onboarding as completed
+        await updateProfile.mutateAsync({ onboarding_completed: true } as any);
 
-        toast.success("Profil complété avec succès !");
-        
-        // Force navigation to /home
-        navigate("/home", { replace: true });
+        // d) Invalidate profile cache
+        await queryClient.invalidateQueries({ queryKey: ["profile"] });
+
+        // e) Show success message
+        toast.success("Profil complété !");
+
+        // f) Force full page reload to purge cache and re-read from DB
+        window.location.assign("/home");
       } catch (error) {
         console.error("Error:", error);
         toast.error("Erreur de sauvegarde.");

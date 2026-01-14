@@ -35,8 +35,8 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
     );
   }
 
-  // Check if onboarding is complete (name and role are required)
-  const isOnboardingComplete = profile?.name && profile?.role;
+  // Check if onboarding is complete using the onboarding_completed flag
+  const isOnboardingComplete = (profile as any)?.onboarding_completed === true;
 
   // If user has completed onboarding and tries to access /onboarding, redirect to /home
   if (isOnboardingComplete && location.pathname === '/onboarding') {

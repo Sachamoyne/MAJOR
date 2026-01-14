@@ -46,7 +46,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (updates: ProfileUpdate) => {
+    mutationFn: async (updates: Partial<ProfileUpdate>) => {
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase

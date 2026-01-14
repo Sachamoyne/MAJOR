@@ -303,12 +303,50 @@ function ProfileCard({ profile, onTap }: { profile: MatchProfile; onTap: () => v
         )}
 
         {profile.school && (
-          <p className="text-muted-foreground text-xs mb-4">
+          <p className="text-muted-foreground text-xs mb-3">
             🎓 {profile.school}
           </p>
         )}
 
-        <p className="text-xs text-muted-foreground mb-2">Tap pour voir le profil complet</p>
+        {/* Skills from database */}
+        {profile.owned_skills && profile.owned_skills.length > 0 && (
+          <div className="mb-3">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider mb-2">
+              Compétences
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {profile.owned_skills.slice(0, 4).map((skill) => (
+                <span
+                  key={skill.id}
+                  className="px-2.5 py-1 text-xs text-foreground bg-secondary rounded-full"
+                >
+                  {skill.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Wanted Skills from database */}
+        {profile.wanted_skills && profile.wanted_skills.length > 0 && (
+          <div className="mb-3">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-wider mb-2">
+              Recherche
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {profile.wanted_skills.slice(0, 3).map((skill) => (
+                <span
+                  key={skill.id}
+                  className="px-2.5 py-1 text-xs text-foreground border border-primary/20 rounded-full"
+                >
+                  {skill.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-[10px] text-muted-foreground mt-2">Tap pour voir le profil complet</p>
       </div>
     </div>
   );

@@ -4,54 +4,87 @@ import { Check } from 'lucide-react';
 interface OnboardingProgressProps {
   currentStep: number;
   totalSteps: number;
-  stepLabels: string[];
+  stepLabels?: string[];
 }
 
 export function OnboardingProgress({ currentStep, totalSteps, stepLabels }: OnboardingProgressProps) {
   return (
-    <div className="w-full max-w-2xl mx-auto px-4">
-      <div className="flex items-center justify-between relative">
-        {/* Progress line background */}
-        <div className="absolute top-4 left-0 right-0 h-0.5 bg-border" />
-        
-        {/* Progress line filled */}
-        <div 
-          className="absolute top-4 left-0 h-0.5 bg-primary transition-all duration-500"
-          style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 100}%` }}
-        />
-        
-        {/* Steps */}
-        {stepLabels.map((label, index) => {
+    <div className="w-full">
+      {/* Progress bar */}
+      <div className="flex items-center gap-1.5 mb-3">
+        {Array.from({ length: totalSteps }).map((_, index) => {
           const stepNumber = index + 1;
           const isCompleted = stepNumber < currentStep;
           const isCurrent = stepNumber === currentStep;
-          
+
           return (
-            <div key={index} className="relative flex flex-col items-center z-10">
-              <div 
-                className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300",
-                  isCompleted && "bg-primary text-primary-foreground",
-                  isCurrent && "bg-primary text-primary-foreground ring-4 ring-primary/20",
-                  !isCompleted && !isCurrent && "bg-muted text-muted-foreground border border-border"
-                )}
-              >
-                {isCompleted ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  stepNumber
-                )}
-              </div>
-              <span className={cn(
-                "mt-2 text-xs font-medium whitespace-nowrap",
-                (isCompleted || isCurrent) ? "text-foreground" : "text-muted-foreground"
-              )}>
-                {label}
-              </span>
-            </div>
+            <div
+              key={index}
+              className={cn(
+                "h-1.5 flex-1 rounded-full transition-all duration-300",
+                isCompleted || isCurrent
+                  ? "bg-primary"
+                  : "bg-border"
+              )}
+            />
           );
         })}
       </div>
+
+      {/* Step indicators - only show on larger screens */}
+      {stepLabels && (
+        <div className="hidden sm:flex items-center justify-between">
+          {stepLabels.map((label, index) => {
+            const stepNumber = index + 1;
+            const isCompleted = stepNumber < currentStep;
+            const isCurrent = stepNumber === currentStep;
+
+            return (
+              <div
+                key={index}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 transition-opacity",
+                  isCurrent ? "opacity-100" : isCompleted ? "opacity-70" : "opacity-40"
+                )}
+              >
+                <div
+                  className={cn(
+                    "h-7 w-7 rounded-full flex items-center justify-center text-xs font-medium transition-all",
+                    isCompleted
+                      ? "bg-primary text-primary-foreground"
+                      : isCurrent
+                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+                      : "bg-secondary text-muted-foreground border border-border"
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    stepNumber
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "text-[11px] font-medium",
+                    isCurrent ? "text-foreground" : "text-muted-foreground"
+                  )}
+                >
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Mobile: show current step label */}
+      {stepLabels && (
+        <div className="flex sm:hidden justify-center mt-2">
+          <span className="text-sm font-medium text-foreground">
+            {currentStep}/{totalSteps} — {stepLabels[currentStep - 1]}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -99,12 +99,15 @@ export type Database = {
           bio: string | null
           city: string | null
           created_at: string
+          github_url: string | null
           id: string
           is_active: boolean
+          linkedin_url: string | null
           name: string | null
           objective: string | null
           role: string | null
           school: string | null
+          twitter_url: string | null
           updated_at: string
           user_id: string
         }
@@ -115,12 +118,15 @@ export type Database = {
           bio?: string | null
           city?: string | null
           created_at?: string
+          github_url?: string | null
           id?: string
           is_active?: boolean
+          linkedin_url?: string | null
           name?: string | null
           objective?: string | null
           role?: string | null
           school?: string | null
+          twitter_url?: string | null
           updated_at?: string
           user_id: string
         }
@@ -131,12 +137,15 @@ export type Database = {
           bio?: string | null
           city?: string | null
           created_at?: string
+          github_url?: string | null
           id?: string
           is_active?: boolean
+          linkedin_url?: string | null
           name?: string | null
           objective?: string | null
           role?: string | null
           school?: string | null
+          twitter_url?: string | null
           updated_at?: string
           user_id?: string
         }

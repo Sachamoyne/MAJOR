@@ -26,8 +26,8 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Show loading while fetching profile (only if we need to check onboarding)
-  if (requireOnboarding && profileLoading) {
+  // Show loading while fetching profile
+  if (profileLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -38,8 +38,12 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
   // Check if onboarding is complete (name and role are required)
   const isOnboardingComplete = profile?.name && profile?.role;
 
+  // If user has completed onboarding and tries to access /onboarding, redirect to /home
+  if (isOnboardingComplete && location.pathname === '/onboarding') {
+    return <Navigate to="/home" replace />;
+  }
+
   // If on a protected page that requires onboarding and onboarding is not complete, redirect to onboarding
-  // But don't redirect if we're already on the onboarding page
   if (requireOnboarding && !isOnboardingComplete && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
   }

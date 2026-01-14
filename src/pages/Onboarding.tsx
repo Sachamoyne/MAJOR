@@ -10,9 +10,8 @@ import { toast } from "sonner";
 
 const stepLabels = ["Infos", "Rôle", "Compétences", "Recherche", "Ambition"];
 
-// Alignement sur les Enums SQL de ta base
+// Strictement aligné sur tes contraintes SQL Supabase
 type Role = "Tech" | "Business" | "Design" | "Marketing" | "Product" | "Operations" | "Other";
-type Objective = "find-cofounder" | "join-project";
 
 const roles: { id: Role; label: string; description: string; icon: string }[] = [
   { id: "Tech", label: "Tech", description: "Développement, data, infrastructure", icon: "💻" },
@@ -20,33 +19,6 @@ const roles: { id: Role; label: string; description: string; icon: string }[] = 
   { id: "Business", label: "Business", description: "Vente, stratégie, finance", icon: "💼" },
   { id: "Other", label: "Autre", description: "Généraliste ou autre domaine", icon: "🔄" },
 ];
-
-const objectives: { id: Objective; label: string; description: string; icon: string }[] = [
-  {
-    id: "find-cofounder",
-    label: "Trouver un co-fondateur",
-    description: "J'ai une idée et je cherche quelqu'un",
-    icon: "🎯",
-  },
-  {
-    id: "join-project",
-    label: "Rejoindre un projet",
-    description: "Je veux rejoindre une équipe existante",
-    icon: "🤝",
-  },
-];
-
-interface OnboardingData {
-  full_name: string;
-  age: string;
-  city: string;
-  education: string;
-  role_primary: Role | null;
-  ownedSkillIds: string[];
-  wantedSkillIds: string[];
-  commitment_hours: string | null;
-  ambition_level: string | null;
-}
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -56,14 +28,14 @@ export default function Onboarding() {
   const updateSkills = useUpdateUserSkills();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [data, setData] = useState<OnboardingData>({
+  const [data, setData] = useState({
     full_name: "",
     age: "",
     city: "",
     education: "",
-    role_primary: null,
-    ownedSkillIds: [],
-    wantedSkillIds: [],
+    role_primary: null as Role | null,
+    ownedSkillIds: [] as string[],
+    wantedSkillIds: [] as string[],
     commitment_hours: "35h+",
     ambition_level: "join-project",
   });
@@ -83,25 +55,8 @@ export default function Onboarding() {
     }
   }, [profile]);
 
-  const updateData = <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
+  const updateData = (key: string, value: any) => {
     setData((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const canProceed = () => {
-    switch (currentStep) {
-      case 1:
-        return !!(data.full_name && data.age && data.city && data.education);
-      case 2:
-        return !!data.role_primary;
-      case 3:
-        return data.ownedSkillIds.length >= 1;
-      case 4:
-        return data.wantedSkillIds.length >= 1;
-      case 5:
-        return !!(data.commitment_hours && data.ambition_level);
-      default:
-        return false;
-    }
   };
 
   const handleNext = async () => {
@@ -109,275 +64,169 @@ export default function Onboarding() {
       setCurrentStep(currentStep + 1);
     } else {
       try {
-        // NETTOYAGE ET FORMATAGE DES DONNÉES AVANT ENVOI
-        const profileUpdates = {
-          full_name: data.full_name.trim(),
-          age: data.age ? parseInt(data.age, 10) : null, // Conversion explicite en int4 pour Supabase
-          city: data.city.trim(),
-          education: data.education.trim(),
+        // --- SÉCURISATION DES DONNÉES (Pour éviter la 400) ---
+        const sanitizedUpdates = {
+          full_name: data.full_name.trim() || "Utilisateur",
+          age: data.age ? parseInt(data.age, 10) : null, // Force l'entier (int4)
+          city: data.city.trim() || null,
+          education: data.education.trim() || null,
           role_primary: data.role_primary,
-          commitment_hours: String(data.commitment_hours), // Forçage en format text
-          ambition_level: String(data.ambition_level), // Forçage en format text
+          commitment_hours: String(data.commitment_hours), // Force le texte
+          ambition_level: String(data.ambition_level), // Force le texte
           onboarding_completed: true,
         };
 
-        // 1. Sauvegarde du profil
-        await updateProfile.mutateAsync(profileUpdates);
+        // 1. Sauvegarde Profil
+        await updateProfile.mutateAsync(sanitizedUpdates);
 
-        // 2. Sauvegarde des compétences (Table séparée)
+        // 2. Sauvegarde Skills
         await updateSkills.mutateAsync({
           ownedSkillIds: data.ownedSkillIds,
           wantedSkillIds: data.wantedSkillIds,
         });
 
-        toast.success("Profil complété avec succès !");
+        toast.success("Profil enregistré !");
         navigate("/home");
       } catch (error) {
-        console.error("Error saving profile:", error);
-        toast.error("Erreur lors de la sauvegarde : vérifiez les types de données.");
+        console.error("Détails de l'erreur:", error);
+        toast.error("Erreur de sauvegarde. Vérifiez les champs.");
       }
     }
   };
 
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-    else navigate("/");
+  const canProceed = () => {
+    if (currentStep === 1) return !!(data.full_name && data.age && data.city);
+    if (currentStep === 2) return !!data.role_primary;
+    if (currentStep === 3) return data.ownedSkillIds.length > 0;
+    if (currentStep === 4) return data.wantedSkillIds.length > 0;
+    if (currentStep === 5) return !!(data.commitment_hours && data.ambition_level);
+    return false;
   };
-
-  const skillsByCategory = allSkills?.reduce(
-    (acc, skill) => {
-      const category = skill.category || "Other";
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(skill);
-      return acc;
-    },
-    {} as Record<string, typeof allSkills>,
-  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="container max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Users className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-semibold text-lg text-foreground">CoFounder</span>
-          </div>
-          <OnboardingProgress currentStep={currentStep} totalSteps={5} stepLabels={stepLabels} />
-        </div>
+      <header className="border-b p-4 container max-w-4xl mx-auto">
+        <OnboardingProgress currentStep={currentStep} totalSteps={5} stepLabels={stepLabels} />
       </header>
 
-      <main className="flex-1 container max-w-2xl mx-auto px-4 py-8">
-        <div className="animate-fade-in">
-          {currentStep === 1 && (
-            <StepPersonalInfo
-              fullName={data.full_name}
-              age={data.age}
-              city={data.city}
-              education={data.education}
-              onFullNameChange={(v) => updateData("full_name", v)}
-              onAgeChange={(v) => updateData("age", v)}
-              onCityChange={(v) => updateData("city", v)}
-              onEducationChange={(v) => updateData("education", v)}
+      <main className="flex-1 container max-w-xl mx-auto py-10 px-4">
+        {currentStep === 1 && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Infos Persos</h2>
+            <Input
+              placeholder="Prénom"
+              value={data.full_name}
+              onChange={(e) => updateData("full_name", e.target.value)}
             />
-          )}
-          {currentStep === 2 && (
-            <StepRole role={data.role_primary} onRoleChange={(role) => updateData("role_primary", role)} />
-          )}
-          {currentStep === 3 && (
-            <StepSkills
-              title="Vos compétences"
-              description="Maîtrisées (max 5)"
-              selectedSkillIds={data.ownedSkillIds}
-              onSkillsChange={(ids) => updateData("ownedSkillIds", ids)}
-              skillsByCategory={skillsByCategory || {}}
-              loading={skillsLoading}
-              maxSkills={5}
+            <Input
+              placeholder="Âge"
+              type="number"
+              value={data.age}
+              onChange={(e) => updateData("age", e.target.value)}
             />
-          )}
-          {currentStep === 4 && (
-            <StepSkills
-              title="Ce que vous recherchez"
-              description="Recherchées (max 5)"
-              selectedSkillIds={data.wantedSkillIds}
-              onSkillsChange={(ids) => updateData("wantedSkillIds", ids)}
-              skillsByCategory={skillsByCategory || {}}
-              loading={skillsLoading}
-              maxSkills={5}
+            <Input placeholder="Ville" value={data.city} onChange={(e) => updateData("city", e.target.value)} />
+            <Input
+              placeholder="École"
+              value={data.education}
+              onChange={(e) => updateData("education", e.target.value)}
             />
-          )}
-          {currentStep === 5 && (
-            <StepEngagement
-              commitmentHours={data.commitment_hours}
-              ambitionLevel={data.ambition_level}
-              onCommitmentHoursChange={(v) => updateData("commitment_hours", v)}
-              onAmbitionLevelChange={(v) => updateData("ambition_level", v)}
-            />
-          )}
-        </div>
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Votre rôle</h2>
+            <div className="grid gap-2">
+              {roles.map((r) => (
+                <Button
+                  key={r.id}
+                  variant={data.role_primary === r.id ? "default" : "outline"}
+                  onClick={() => updateData("role_primary", r.id)}
+                >
+                  {r.icon} {r.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {currentStep === 3 && (
+          <SkillsStep
+            title="Vos compétences"
+            selected={data.ownedSkillIds}
+            onChange={(ids) => updateData("ownedSkillIds", ids)}
+            allSkills={allSkills}
+          />
+        )}
+        {currentStep === 4 && (
+          <SkillsStep
+            title="Recherche"
+            selected={data.wantedSkillIds}
+            onChange={(ids) => updateData("wantedSkillIds", ids)}
+            allSkills={allSkills}
+          />
+        )}
+
+        {currentStep === 5 && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Engagement</h2>
+            <div className="grid gap-2">
+              {["35h+", "15h", "5h"].map((v) => (
+                <Button
+                  key={v}
+                  variant={data.commitment_hours === v ? "default" : "outline"}
+                  onClick={() => updateData("commitment_hours", v)}
+                >
+                  {v}
+                </Button>
+              ))}
+            </div>
+            <div className="grid gap-2">
+              {["find-cofounder", "join-project"].map((v) => (
+                <Button
+                  key={v}
+                  variant={data.ambition_level === v ? "default" : "outline"}
+                  onClick={() => updateData("ambition_level", v)}
+                >
+                  {v}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
-      <footer className="border-t border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="container max-w-2xl mx-auto px-4 py-4 flex justify-between">
-          <Button variant="ghost" onClick={handleBack}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
-          <Button onClick={handleNext} disabled={!canProceed() || updateProfile.isPending || updateSkills.isPending}>
-            {updateProfile.isPending || updateSkills.isPending
-              ? "Sauvegarde..."
-              : currentStep === 5
-                ? "Terminer"
-                : "Continuer"}
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
+      <footer className="p-4 border-t container max-w-xl mx-auto flex justify-between">
+        <Button variant="ghost" onClick={() => (currentStep > 1 ? setCurrentStep(currentStep - 1) : navigate("/"))}>
+          Retour
+        </Button>
+        <Button onClick={handleNext} disabled={!canProceed() || updateProfile.isPending}>
+          {currentStep === 5 ? "Terminer" : "Continuer"} <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
       </footer>
     </div>
   );
 }
 
-// COMPOSANTS INTERNES
-function StepPersonalInfo({
-  fullName,
-  age,
-  city,
-  education,
-  onFullNameChange,
-  onAgeChange,
-  onCityChange,
-  onEducationChange,
-}: any) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">Informations personnelles</h2>
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm font-medium">Prénom</label>
-          <Input value={fullName} onChange={(e) => onFullNameChange(e.target.value)} placeholder="Thomas" />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Âge</label>
-          <Input type="number" value={age} onChange={(e) => onAgeChange(e.target.value)} placeholder="25" />
-        </div>
-        <div>
-          <label className="text-sm font-medium">Ville</label>
-          <Input value={city} onChange={(e) => onCityChange(e.target.value)} placeholder="Paris" />
-        </div>
-        <div>
-          <label className="text-sm font-medium">École / Entreprise</label>
-          <Input value={education} onChange={(e) => onEducationChange(e.target.value)} placeholder="HEC, 42..." />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StepRole({ role, onRoleChange }: any) {
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">Votre rôle idéal</h2>
-      <div className="grid gap-3">
-        {roles.map((r) => (
-          <button
-            key={r.id}
-            onClick={() => onRoleChange(r.id)}
-            className={cn(
-              "p-4 rounded-xl border text-left transition-all",
-              role === r.id
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card border-border hover:bg-accent",
-            )}
-          >
-            <span className="text-2xl mr-2">{r.icon}</span> {r.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StepSkills({
-  title,
-  description,
-  selectedSkillIds,
-  onSkillsChange,
-  skillsByCategory,
-  loading,
-  maxSkills,
-}: any) {
-  const toggleSkill = (id: string) => {
-    if (selectedSkillIds.includes(id)) onSkillsChange(selectedSkillIds.filter((s: string) => s !== id));
-    else if (selectedSkillIds.length < maxSkills) onSkillsChange([...selectedSkillIds, id]);
+function SkillsStep({ title, selected, onChange, allSkills }: any) {
+  const toggle = (id: string) => {
+    if (selected.includes(id)) onChange(selected.filter((s: string) => s !== id));
+    else if (selected.length < 5) onChange([...selected, id]);
   };
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">{title}</h2>
-      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-        {Object.entries(skillsByCategory).map(([cat, skills]: any) => (
-          <div key={cat}>
-            <p className="text-sm text-muted-foreground mb-2">{cat}</p>
-            <div className="flex flex-wrap gap-2">
-              {skills.map((s: any) => (
-                <Button
-                  key={s.id}
-                  variant={selectedSkillIds.includes(s.id) ? "default" : "secondary"}
-                  onClick={() => toggleSkill(s.id)}
-                  className="rounded-full"
-                >
-                  {s.name}
-                </Button>
-              ))}
-            </div>
-          </div>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">{title}</h2>
+      <div className="flex flex-wrap gap-2">
+        {allSkills?.map((s: any) => (
+          <Button
+            key={s.id}
+            variant={selected.includes(s.id) ? "default" : "secondary"}
+            onClick={() => toggle(s.id)}
+            className="rounded-full"
+          >
+            {s.name}
+          </Button>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function StepEngagement({ commitmentHours, ambitionLevel, onCommitmentHoursChange, onAmbitionLevelChange }: any) {
-  const options = [
-    { v: "35h+", l: "Temps plein" },
-    { v: "15h", l: "Side project" },
-    { v: "5h", l: "Soirs & weekends" },
-  ];
-  const objectives = [
-    { v: "find-cofounder", l: "Trouver un co-fondateur" },
-    { v: "join-project", l: "Rejoindre un projet" },
-  ];
-  return (
-    <div className="space-y-8">
-      <div className="space-y-3">
-        <p className="font-medium text-foreground">Disponibilité</p>
-        <div className="grid gap-2">
-          {options.map((o) => (
-            <Button
-              key={o.v}
-              variant={commitmentHours === o.v ? "default" : "outline"}
-              onClick={() => onCommitmentHoursChange(o.v)}
-              className="justify-start h-auto py-3 px-4"
-            >
-              {o.l}
-            </Button>
-          ))}
-        </div>
-      </div>
-      <div className="space-y-3">
-        <p className="font-medium text-foreground">Objectif</p>
-        <div className="grid gap-2">
-          {objectives.map((o) => (
-            <Button
-              key={o.v}
-              variant={ambitionLevel === o.v ? "default" : "outline"}
-              onClick={() => onAmbitionLevelChange(o.v)}
-              className="justify-start h-auto py-3 px-4"
-            >
-              {o.l}
-            </Button>
-          ))}
-        </div>
       </div>
     </div>
   );

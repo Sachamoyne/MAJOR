@@ -10,7 +10,6 @@ import { toast } from "sonner";
 
 const stepLabels = ["Infos", "Rôle", "Compétences", "Recherche", "Ambition"];
 
-// Alignement sur les Enums SQL de ta base
 type Role = "Tech" | "Business" | "Design" | "Marketing" | "Product" | "Operations" | "Other";
 type Objective = "find-cofounder" | "join-project";
 
@@ -44,7 +43,7 @@ interface OnboardingData {
   role_primary: Role | null;
   ownedSkillIds: string[];
   wantedSkillIds: string[];
-  commitment_hours: string | null; // Changé en string pour match Supabase
+  commitment_hours: string | null;
   ambition_level: string | null;
 }
 
@@ -90,7 +89,7 @@ export default function Onboarding() {
   const canProceed = () => {
     switch (currentStep) {
       case 1:
-        return data.full_name && data.age && data.city && data.education;
+        return !!(data.full_name && data.age && data.city && data.education);
       case 2:
         return !!data.role_primary;
       case 3:
@@ -98,7 +97,7 @@ export default function Onboarding() {
       case 4:
         return data.wantedSkillIds.length >= 1;
       case 5:
-        return data.commitment_hours && data.ambition_level;
+        return !!(data.commitment_hours && data.ambition_level);
       default:
         return false;
     }
@@ -109,10 +108,10 @@ export default function Onboarding() {
       setCurrentStep(currentStep + 1);
     } else {
       try {
-        // Envoi des données avec les bons types
+        // SAUVEGARDE DU PROFIL (Uniquement les colonnes de la table profiles)
         await updateProfile.mutateAsync({
           full_name: data.full_name,
-          age: parseInt(data.age),
+          age: data.age ? parseInt(data.age) : null,
           city: data.city,
           education: data.education,
           role_primary: data.role_primary,
@@ -121,6 +120,7 @@ export default function Onboarding() {
           onboarding_completed: true,
         });
 
+        // SAUVEGARDE DES SKILLS (Table user_skills)
         await updateSkills.mutateAsync({
           ownedSkillIds: data.ownedSkillIds,
           wantedSkillIds: data.wantedSkillIds,
@@ -130,17 +130,14 @@ export default function Onboarding() {
         navigate("/home");
       } catch (error) {
         console.error("Error saving profile:", error);
-        toast.error("Erreur lors de la sauvegarde : vérifiez les types de données");
+        toast.error("Erreur lors de la sauvegarde : vérifiez la connexion Supabase");
       }
     }
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    } else {
-      navigate("/");
-    }
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    else navigate("/");
   };
 
   const skillsByCategory = allSkills?.reduce(
@@ -181,15 +178,13 @@ export default function Onboarding() {
               onEducationChange={(v) => updateData("education", v)}
             />
           )}
-
           {currentStep === 2 && (
             <StepRole role={data.role_primary} onRoleChange={(role) => updateData("role_primary", role)} />
           )}
-
           {currentStep === 3 && (
             <StepSkills
               title="Vos compétences"
-              description="Sélectionnez les compétences que vous maîtrisez (jusqu'à 5)"
+              description="Maîtrisées (max 5)"
               selectedSkillIds={data.ownedSkillIds}
               onSkillsChange={(ids) => updateData("ownedSkillIds", ids)}
               skillsByCategory={skillsByCategory || {}}
@@ -197,11 +192,10 @@ export default function Onboarding() {
               maxSkills={5}
             />
           )}
-
           {currentStep === 4 && (
             <StepSkills
               title="Ce que vous recherchez"
-              description="Quelles compétences recherchez-vous chez un co-fondateur ? (jusqu'à 5)"
+              description="Recherchées (max 5)"
               selectedSkillIds={data.wantedSkillIds}
               onSkillsChange={(ids) => updateData("wantedSkillIds", ids)}
               skillsByCategory={skillsByCategory || {}}
@@ -209,11 +203,10 @@ export default function Onboarding() {
               maxSkills={5}
             />
           )}
-
           {currentStep === 5 && (
             <StepEngagement
               commitmentHours={data.commitment_hours}
-              ambitionLevel={data.ambition_level as Objective | null}
+              ambitionLevel={data.ambition_level}
               onCommitmentHoursChange={(v) => updateData("commitment_hours", v)}
               onAmbitionLevelChange={(v) => updateData("ambition_level", v)}
             />
@@ -241,7 +234,7 @@ export default function Onboarding() {
   );
 }
 
-// Composants de step inchangés mais avec types cleans
+// COMPOSANTS INTERNES
 function StepPersonalInfo({
   fullName,
   age,
@@ -254,30 +247,23 @@ function StepPersonalInfo({
 }: any) {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Informations personnelles</h2>
-        <p className="text-muted-foreground">Quelques infos pour trouver des co-fondateurs proches de vous.</p>
-      </div>
+      <h2 className="text-2xl font-bold">Informations personnelles</h2>
       <div className="space-y-4">
-        <div className="space-y-2">
+        <div>
           <label className="text-sm font-medium">Prénom</label>
           <Input value={fullName} onChange={(e) => onFullNameChange(e.target.value)} placeholder="Thomas" />
         </div>
-        <div className="space-y-2">
+        <div>
           <label className="text-sm font-medium">Âge</label>
           <Input type="number" value={age} onChange={(e) => onAgeChange(e.target.value)} placeholder="25" />
         </div>
-        <div className="space-y-2">
+        <div>
           <label className="text-sm font-medium">Ville</label>
           <Input value={city} onChange={(e) => onCityChange(e.target.value)} placeholder="Paris" />
         </div>
-        <div className="space-y-2">
+        <div>
           <label className="text-sm font-medium">École / Entreprise</label>
-          <Input
-            value={education}
-            onChange={(e) => onEducationChange(e.target.value)}
-            placeholder="HEC, 42, Google..."
-          />
+          <Input value={education} onChange={(e) => onEducationChange(e.target.value)} placeholder="HEC, 42..." />
         </div>
       </div>
     </div>
@@ -315,20 +301,17 @@ function StepSkills({
   loading,
   maxSkills,
 }: any) {
-  const toggleSkill = (skillId: string) => {
-    if (selectedSkillIds.includes(skillId)) {
-      onSkillsChange(selectedSkillIds.filter((id: string) => id !== skillId));
-    } else if (selectedSkillIds.length < maxSkills) {
-      onSkillsChange([...selectedSkillIds, skillId]);
-    }
+  const toggleSkill = (id: string) => {
+    if (selectedSkillIds.includes(id)) onSkillsChange(selectedSkillIds.filter((s: string) => s !== id));
+    else if (selectedSkillIds.length < maxSkills) onSkillsChange([...selectedSkillIds, id]);
   };
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">{title}</h2>
       <div className="space-y-4">
-        {Object.entries(skillsByCategory).map(([category, skills]: any) => (
-          <div key={category}>
-            <p className="text-sm text-muted-foreground">{category}</p>
+        {Object.entries(skillsByCategory).map(([cat, skills]: any) => (
+          <div key={cat}>
+            <p className="text-sm text-muted-foreground mb-2">{cat}</p>
             <div className="flex flex-wrap gap-2">
               {skills.map((s: any) => (
                 <Button
@@ -349,34 +332,43 @@ function StepSkills({
 
 function StepEngagement({ commitmentHours, ambitionLevel, onCommitmentHoursChange, onAmbitionLevelChange }: any) {
   const options = [
-    { value: "35h+", label: "Temps plein" },
-    { value: "15h", label: "Side project" },
-    { value: "5h", label: "Soirs & weekends" },
+    { v: "35h+", l: "Temps plein" },
+    { v: "15h", l: "Side project" },
+    { v: "5h", l: "Soirs & weekends" },
+  ];
+  const objectives = [
+    { v: "find-cofounder", l: "Trouver un co-fondateur" },
+    { v: "join-project", l: "Rejoindre un projet" },
   ];
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Votre engagement</h2>
-      <div className="grid gap-3">
-        {options.map((o) => (
-          <Button
-            key={o.value}
-            variant={commitmentHours === o.value ? "default" : "outline"}
-            onClick={() => onCommitmentHoursChange(o.value)}
-          >
-            {o.label}
-          </Button>
-        ))}
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <p className="font-medium">Disponibilité</p>
+        <div className="grid gap-2">
+          {options.map((o) => (
+            <Button
+              key={o.v}
+              variant={commitmentHours === o.v ? "default" : "outline"}
+              onClick={() => onCommitmentHoursChange(o.v)}
+            >
+              {o.l}
+            </Button>
+          ))}
+        </div>
       </div>
-      <div className="grid gap-3">
-        {objectives.map((o) => (
-          <Button
-            key={o.id}
-            variant={ambitionLevel === o.id ? "default" : "outline"}
-            onClick={() => onAmbitionLevelChange(o.id)}
-          >
-            {o.label}
-          </Button>
-        ))}
+      <div className="space-y-3">
+        <p className="font-medium">Objectif</p>
+        <div className="grid gap-2">
+          {objectives.map((o) => (
+            <Button
+              key={o.v}
+              variant={ambitionLevel === o.v ? "default" : "outline"}
+              onClick={() => onAmbitionLevelChange(o.v)}
+            >
+              {o.l}
+            </Button>
+          ))}
+        </div>
       </div>
     </div>
   );

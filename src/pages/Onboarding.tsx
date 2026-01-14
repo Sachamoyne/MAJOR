@@ -7,6 +7,8 @@ import { AvatarUpload } from "@/components/AvatarUpload";
 import { PremiumCard, SkillChip } from "@/components/PremiumCard";
 import { ArrowRight, ArrowLeft, Linkedin, Github } from "lucide-react";
 import { useUpdateProfile, useAllSkills, useUpdateUserSkills, useProfile } from "@/hooks/useProfile";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const stepLabels = ["Profil", "Rôle", "Compétences", "Recherche", "Disponibilité", "Réseaux"];
@@ -36,6 +38,8 @@ const objectives = [
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: allSkills } = useAllSkills();
   const updateProfile = useUpdateProfile();
@@ -117,8 +121,16 @@ export default function Onboarding() {
           wantedSkillIds: data.wantedSkillIds,
         });
 
+        // Invalidate and wait for profile cache to update
+        await queryClient.invalidateQueries({ queryKey: ["profile", user?.id] });
+        
+        // Wait a brief moment for the cache to settle
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         toast.success("Profil complété avec succès !");
-        navigate("/home");
+        
+        // Force navigation to /home
+        navigate("/home", { replace: true });
       } catch (error) {
         console.error("Error:", error);
         toast.error("Erreur de sauvegarde.");

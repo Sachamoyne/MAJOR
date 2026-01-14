@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Heart, Star, User, MessageCircle, Settings, MapPin } from "lucide-react";
+import { X, Heart, Star, MessageCircle, Settings, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMatchingProfiles, useLikeProfile, MatchProfile } from "@/hooks/useMatching";
 import { useProfile } from "@/hooks/useProfile";
+import { BottomNav } from "@/components/BottomNav";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -14,15 +15,6 @@ const Home = () => {
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [exitDirection, setExitDirection] = useState<"left" | "right" | null>(null);
-
-  // Check if onboarding is complete
-  const isOnboardingComplete = profile?.name && profile?.role;
-
-  // Redirect to onboarding if not complete
-  if (!profileLoading && !isOnboardingComplete) {
-    navigate('/onboarding');
-    return null;
-  }
 
   const currentProfile = profiles?.[currentIndex];
   const hasMoreProfiles = profiles && currentIndex < profiles.length;
@@ -96,7 +88,7 @@ const Home = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
         </div>
-        <BottomNav currentPath="/home" />
+        <BottomNav />
       </div>
     );
   }
@@ -147,7 +139,7 @@ const Home = () => {
           </div>
         </div>
 
-        <BottomNav currentPath="/home" />
+        <BottomNav />
       </div>
     );
   }
@@ -242,7 +234,7 @@ const Home = () => {
         )}
       </div>
 
-      <BottomNav currentPath="/home" />
+      <BottomNav />
     </div>
   );
 };
@@ -321,39 +313,5 @@ function ProfileCard({ profile, onTap }: { profile: MatchProfile; onTap: () => v
     </div>
   );
 }
-
-// Bottom Navigation Component
-const BottomNav = ({ currentPath }: { currentPath: string }) => {
-  const navigate = useNavigate();
-  
-  const navItems = [
-    { path: "/home", icon: Heart, label: "Découvrir" },
-    { path: "/messages", icon: MessageCircle, label: "Messages" },
-    { path: "/profile", icon: User, label: "Profil" },
-  ];
-
-  return (
-    <nav className="border-t border-border/50 bg-white px-6 py-3">
-      <div className="flex items-center justify-around">
-        {navItems.map((item) => {
-          const isActive = currentPath === item.path;
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={cn(
-                "flex flex-col items-center gap-1 px-4 py-1 transition-colors",
-                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
-};
 
 export default Home;

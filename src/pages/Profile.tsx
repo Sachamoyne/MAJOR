@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BottomNav } from "@/components/BottomNav";
 
 // Mock user profile data
 const userProfile = {
@@ -169,6 +170,8 @@ const Profile = () => {
           </div>
         )}
       </main>
+
+      <BottomNav />
     </div>
   );
 };
